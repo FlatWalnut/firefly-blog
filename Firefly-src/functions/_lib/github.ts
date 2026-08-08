@@ -27,6 +27,7 @@ export class GitHubApiError extends Error {
 	readonly endpoint: string;
 	readonly oauthScopes: string | null;
 	readonly acceptedOauthScopes: string | null;
+	readonly acceptedGithubPermissions: string | null;
 	readonly githubMessage: string;
 	readonly userMessage: string;
 
@@ -35,6 +36,7 @@ export class GitHubApiError extends Error {
 		endpoint: string;
 		oauthScopes: string | null;
 		acceptedOauthScopes: string | null;
+		acceptedGithubPermissions: string | null;
 		githubMessage: string;
 	}) {
 		const githubMessage = redactToken(options.githubMessage);
@@ -44,6 +46,7 @@ export class GitHubApiError extends Error {
 		this.endpoint = options.endpoint;
 		this.oauthScopes = options.oauthScopes;
 		this.acceptedOauthScopes = options.acceptedOauthScopes;
+		this.acceptedGithubPermissions = options.acceptedGithubPermissions;
 		this.githubMessage = githubMessage;
 		this.userMessage = this.message;
 	}
@@ -69,6 +72,7 @@ async function githubFetch<T>(token: string, url: string, init: RequestInit = {}
 		let message = `GitHub API returned ${response.status}`;
 		const oauthScopes = response.headers.get("X-OAuth-Scopes");
 		const acceptedOauthScopes = response.headers.get("X-Accepted-OAuth-Scopes");
+		const acceptedGithubPermissions = response.headers.get("X-Accepted-GitHub-Permissions");
 		try {
 			const error = (await response.json()) as GitHubError;
 			if (error.message) message = error.message;
@@ -80,6 +84,7 @@ async function githubFetch<T>(token: string, url: string, init: RequestInit = {}
 			endpoint: url,
 			oauthScopes,
 			acceptedOauthScopes,
+			acceptedGithubPermissions,
 			githubMessage: message,
 		});
 	}

@@ -3,6 +3,7 @@ import { getRepository, type PublishEnv } from "../../../_lib/env";
 
 type FunctionContext = { request: Request; env: PublishEnv };
 type GitHubRepository = { permissions?: { push?: boolean } };
+type RepositoryAccessError = "forbidden" | "not-found" | "unavailable";
 
 export const onRequestGet = async (
 	context: FunctionContext,
@@ -22,6 +23,7 @@ export const onRequestGet = async (
 	if (!session) return jsonResponse({ connected: false, configured });
 
 	let repositoryWriteAccess = false;
+	let repositoryAccessError: RepositoryAccessError | undefined;
 	try {
 		const repository = getRepository(context.env);
 		const repositoryResponse = await fetch(
@@ -38,9 +40,16 @@ export const onRequestGet = async (
 		if (repositoryResponse.ok) {
 			const repositoryInfo = (await repositoryResponse.json()) as GitHubRepository;
 			repositoryWriteAccess = repositoryInfo.permissions?.push === true;
+		} else {
+			repositoryAccessError =
+				repositoryResponse.status === 403
+					? "forbidden"
+					: repositoryResponse.status === 404
+						? "not-found"
+						: "unavailable";
 		}
 	} catch {
-		// Keep the session visible; publishing will report the actionable API error.
+		repositoryAccessError = "unavailable";
 	}
 
 	return jsonResponse({
@@ -48,5 +57,6 @@ export const onRequestGet = async (
 		configured,
 		login: session.login,
 		repositoryWriteAccess,
+		repositoryAccessError,
 	});
 };
