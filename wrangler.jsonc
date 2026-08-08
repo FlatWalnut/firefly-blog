@@ -5,6 +5,7 @@
 	"vars": {
 		"GITHUB_REPOSITORY": "FlatWalnut/firefly-blog",
 		"GITHUB_BRANCH": "main",
+		"GITHUB_AUTH_TYPE": "github-app",
 		"GITHUB_OAUTH_SCOPE": "public_repo",
 		"GITHUB_ALLOWED_LOGIN": "FlatWalnut"
 	},

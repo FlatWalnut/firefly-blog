@@ -174,10 +174,18 @@ async function loadGitHubSession() {
 			connected?: boolean;
 			login?: string;
 			configured?: boolean;
+			repositoryWriteAccess?: boolean;
 		};
 		githubConfigured = data.configured !== false;
-		githubStatus = data.connected ? "connected" : "disconnected";
+		const hasRepositoryWriteAccess = data.repositoryWriteAccess !== false;
+		githubStatus =
+			data.connected && hasRepositoryWriteAccess ? "connected" : "disconnected";
 		githubLogin = data.login || "";
+		if (data.connected && !hasRepositoryWriteAccess) {
+			sessionStorage.removeItem(PUBLISH_AFTER_AUTH_KEY);
+			showToast("GitHub 已登录，但当前授权没有目标仓库写入权限，请重新授权");
+			return;
+		}
 		if (
 			new URLSearchParams(window.location.search).get("github") === "connected"
 		) {
@@ -487,8 +495,17 @@ async function publishToGitHub() {
 			},
 			body: JSON.stringify({ backup: { posts, settings, media } }),
 		});
-		const result = (await response.json()) as { ok?: boolean; error?: string };
-		if (!response.ok || !result.ok) throw new Error(result.error || "发布失败");
+		const responseText = await response.text();
+		let result: { ok?: boolean; error?: string };
+		try {
+			result = JSON.parse(responseText) as { ok?: boolean; error?: string };
+		} catch {
+			throw new Error(
+				`发布失败（HTTP ${response.status}）：服务器返回了非 JSON 响应，请稍后重试`,
+			);
+		}
+		if (!response.ok || !result.ok)
+			throw new Error(result.error || `发布失败（HTTP ${response.status}）`);
 		githubStatus = "connected";
 		showToast("已提交 GitHub，正在自动部署");
 	} catch (error) {

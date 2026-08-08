@@ -4,6 +4,7 @@ export type PublishEnv = {
 	GITHUB_REPOSITORY?: string;
 	GITHUB_BRANCH?: string;
 	GITHUB_OAUTH_SCOPE?: string;
+	GITHUB_AUTH_TYPE?: "github-app" | "oauth-app";
 	GITHUB_ALLOWED_LOGIN?: string;
 	SESSION_SECRET?: string;
 };
