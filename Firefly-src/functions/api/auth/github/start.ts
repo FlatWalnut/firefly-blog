@@ -11,7 +11,11 @@ export const onRequestGet = (context: FunctionContext): Response => {
 	const authorize = new URL("https://github.com/login/oauth/authorize");
 	authorize.searchParams.set("client_id", env.GITHUB_CLIENT_ID);
 	authorize.searchParams.set("redirect_uri", callback);
-	authorize.searchParams.set("scope", env.GITHUB_OAUTH_SCOPE?.trim() || "public_repo");
+	const isGitHubApp =
+		env.GITHUB_AUTH_TYPE === "github-app" || env.GITHUB_CLIENT_ID.startsWith("Iv23");
+	if (!isGitHubApp) {
+		authorize.searchParams.set("scope", env.GITHUB_OAUTH_SCOPE?.trim() || "public_repo");
+	}
 	authorize.searchParams.set("state", state);
 	const response = new Response(null, { status: 302, headers: { Location: authorize.toString() } });
 	response.headers.append("Set-Cookie", setStateCookie(request, state));
