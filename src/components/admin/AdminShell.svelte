@@ -175,6 +175,7 @@ async function loadGitHubSession() {
 			login?: string;
 			configured?: boolean;
 			repositoryWriteAccess?: boolean;
+			repositoryAccessError?: "forbidden" | "not-found" | "unavailable";
 		};
 		githubConfigured = data.configured !== false;
 		const hasRepositoryWriteAccess = data.repositoryWriteAccess !== false;
@@ -183,7 +184,13 @@ async function loadGitHubSession() {
 		githubLogin = data.login || "";
 		if (data.connected && !hasRepositoryWriteAccess) {
 			sessionStorage.removeItem(PUBLISH_AFTER_AUTH_KEY);
-			showToast("GitHub 已登录，但当前授权没有目标仓库写入权限，请重新授权");
+			const accessMessage =
+				data.repositoryAccessError === "not-found"
+					? "GitHub App 尚未安装到 FlatWalnut/firefly-blog，请安装后重新授权"
+					: data.repositoryAccessError === "forbidden"
+						? "GitHub App 被拒绝访问仓库，请确认 Contents 为 Read and write 并批准权限变更"
+						: "GitHub 已登录，但当前授权没有目标仓库写入权限，请重新授权";
+			showToast(accessMessage);
 			return;
 		}
 		if (

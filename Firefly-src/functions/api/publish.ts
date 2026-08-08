@@ -52,6 +52,7 @@ export const onRequestPost = async (context: FunctionContext): Promise<Response>
 				endpoint: error.endpoint,
 				oauthScopes: error.oauthScopes,
 				acceptedOauthScopes: error.acceptedOauthScopes,
+				acceptedGithubPermissions: error.acceptedGithubPermissions,
 				message: error.githubMessage,
 			});
 			return jsonResponse({ error: error.userMessage }, 502);

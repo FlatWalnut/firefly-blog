@@ -75,7 +75,7 @@ export const onRequestGet = async (context: FunctionContext): Promise<Response> 
 			},
 		);
 		if (!repositoryResponse.ok) {
-			if (repositoryResponse.status === 403) return authErrorRedirect(request, "integration-access");
+			if (repositoryResponse.status === 403 || repositoryResponse.status === 404) return authErrorRedirect(request, "integration-access");
 			return authErrorRedirect(request, "repository-unavailable");
 		}
 		const repositoryInfo = (await repositoryResponse.json()) as GitHubRepository;
