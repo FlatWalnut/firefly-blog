@@ -187,13 +187,19 @@ async function loadGitHubSession() {
 		const githubParams = new URLSearchParams(window.location.search);
 		if (githubParams.get("github") === "error") {
 			const messages: Record<string, string> = {
-				"integration-access": "GitHub 应用无法访问目标仓库，请检查 App 安装范围和 Contents 写入权限后重新授权",
-				"repository-read-only": "GitHub 已登录，但当前授权只有仓库读取权限，请授予写入权限后重新授权",
-				"repository-unavailable": "当前 GitHub 授权无法访问目标仓库，请检查仓库名称和账号权限",
+				"integration-access":
+					"GitHub 应用无法访问目标仓库，请检查 App 安装范围和 Contents 写入权限后重新授权",
+				"repository-read-only":
+					"GitHub 已登录，但当前授权只有仓库读取权限，请授予写入权限后重新授权",
+				"repository-unavailable":
+					"当前 GitHub 授权无法访问目标仓库，请检查仓库名称和账号权限",
 			};
 			sessionStorage.removeItem(PUBLISH_AFTER_AUTH_KEY);
 			window.history.replaceState({}, "", window.location.pathname);
-			showToast(messages[githubParams.get("reason") || ""] || "GitHub 授权未获得目标仓库写入权限，请重新授权");
+			showToast(
+				messages[githubParams.get("reason") || ""] ||
+					"GitHub 授权未获得目标仓库写入权限，请重新授权",
+			);
 		}
 		if (sessionStorage.getItem(PUBLISH_AFTER_AUTH_KEY) === "1") {
 			sessionStorage.removeItem(PUBLISH_AFTER_AUTH_KEY);
