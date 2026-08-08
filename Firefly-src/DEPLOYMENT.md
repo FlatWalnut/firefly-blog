@@ -3,6 +3,10 @@
 The site is deployed to the existing Cloudflare Pages project
 `firefly-personal-blog` by GitHub Actions.
 
+The deployment workflow runs from the repository root. Published posts are
+written to the root `src/content/posts/`; the `Firefly-src` directory is a
+duplicate source snapshot and is not the directory used by the workflow.
+
 ## GitHub setup
 
 Add these repository secrets under **Settings → Secrets and variables → Actions**:
@@ -22,10 +26,11 @@ posts, `public/admin-settings.json`, and uploaded media, then creates one Git
 commit on the configured branch. The existing GitHub Actions workflow performs
 the build and Cloudflare Pages deployment after that commit.
 
-Create a GitHub OAuth App with this callback URL:
+Create a GitHub OAuth App with this callback URL (use the same public domain you
+use to open `/admin`; the active domain is shown below):
 
 ```text
-https://YOUR_SITE_DOMAIN/api/auth/github/callback
+https://xn--qzw410c.cc.cd/api/auth/github/callback
 ```
 
 Set these encrypted secrets on the Cloudflare Pages project under **Settings →

@@ -31,6 +31,8 @@ type Settings = {
 type Media = { id: string; name: string; url: string; kind: "image" };
 type GitHubStatus = "loading" | "disconnected" | "connected" | "publishing";
 
+const PUBLISH_AFTER_AUTH_KEY = "firefly-publish-after-auth";
+
 export let initialPosts: Post[] = [];
 export let desktopWallpapers: string[] = [];
 export let mobileWallpapers: string[] = [];
@@ -97,6 +99,7 @@ let uploadedFileInput: HTMLInputElement;
 let backupFileInput: HTMLInputElement;
 let githubStatus: GitHubStatus = "loading";
 let githubLogin = "";
+let githubConfigured = true;
 
 function blankPost(): Post {
 	return {
@@ -165,10 +168,14 @@ async function loadGitHubSession() {
 		const response = await fetch("/api/auth/github/session", {
 			headers: { Accept: "application/json" },
 		});
+		if (!response.ok)
+			throw new Error(`GitHub session endpoint returned ${response.status}`);
 		const data = (await response.json()) as {
 			connected?: boolean;
 			login?: string;
+			configured?: boolean;
 		};
+		githubConfigured = data.configured !== false;
 		githubStatus = data.connected ? "connected" : "disconnected";
 		githubLogin = data.login || "";
 		if (
@@ -177,8 +184,15 @@ async function loadGitHubSession() {
 			window.history.replaceState({}, "", window.location.pathname);
 			showToast(`GitHub 已连接：${githubLogin}`);
 		}
+		if (sessionStorage.getItem(PUBLISH_AFTER_AUTH_KEY) === "1") {
+			sessionStorage.removeItem(PUBLISH_AFTER_AUTH_KEY);
+			if (githubStatus === "connected") void publishToGitHub();
+			else if (githubConfigured)
+				window.location.href = "/api/auth/github/start";
+		}
 	} catch {
 		githubStatus = "disconnected";
+		githubConfigured = false;
 	}
 }
 
@@ -255,7 +269,15 @@ function savePost() {
 	else posts = posts.map((post) => (post.id === saved.id ? saved : post));
 	persist();
 	showEditor = false;
-	showToast(editorMode === "new" ? "文章已保存为草稿" : "文章已更新");
+	const shouldPublish = saved.status === "published";
+	showToast(
+		shouldPublish
+			? "文章已保存，正在提交 GitHub"
+			: editorMode === "new"
+				? "文章已保存为草稿"
+				: "文章已更新",
+	);
+	if (shouldPublish) void publishToGitHub();
 }
 
 function publishPost(post: Post) {
@@ -424,8 +446,17 @@ async function importBackup(event: Event) {
 }
 
 async function publishToGitHub() {
-	if (githubStatus === "loading" || githubStatus === "publishing") return;
+	if (githubStatus === "loading") {
+		sessionStorage.setItem(PUBLISH_AFTER_AUTH_KEY, "1");
+		return;
+	}
+	if (githubStatus === "publishing") return;
+	if (!githubConfigured) {
+		showToast("线上 GitHub 配置未完成，请检查 Cloudflare Pages 环境变量");
+		return;
+	}
 	if (githubStatus !== "connected") {
+		sessionStorage.setItem(PUBLISH_AFTER_AUTH_KEY, "1");
 		window.location.href = "/api/auth/github/start";
 		return;
 	}
@@ -552,7 +583,7 @@ function clearLocalData() {
 				<div class="appearance-layout"><section class="panel form-panel"><div class="panel-heading"><div><h2>背景与色彩</h2><p>桌面端和移动端可以使用不同的壁纸。</p></div></div><label>桌面端背景</label><div class="select-cards">{#each wallpaperOptions as url, i}<button class:selected={settings.desktopBg === url} class="wallpaper-choice" style={`background-image:url('${url}')`} on:click={() => updateSettings("desktopBg", url)}><span>{#if settings.desktopBg === url}✓{/if}</span><small>D{i + 1}</small></button>{/each}</div><label>移动端背景</label><div class="select-cards mobile-select">{#each mobileWallpaperOptions as url, i}<button class:selected={settings.mobileBg === url} class="wallpaper-choice" style={`background-image:url('${url}')`} on:click={() => updateSettings("mobileBg", url)}><span>{#if settings.mobileBg === url}✓{/if}</span><small>M{i + 1}</small></button>{/each}</div><label for="desktop-url">自定义桌面背景 URL</label><input id="desktop-url" class="form-input" value={settings.desktopBg} on:change={(event) => updateSettings("desktopBg", (event.currentTarget as HTMLInputElement).value)} placeholder="https://…" /><label for="accent">主题强调色</label><div class="color-row"><input id="accent" type="color" value={settings.accent} on:input={(event) => updateSettings("accent", (event.currentTarget as HTMLInputElement).value)} /><span>{settings.accent}</span><small>用于按钮、链接和图表高亮</small></div></section><section class="panel preview-panel"><div class="panel-heading"><div><h2>实时预览</h2><p>看看它在博客首页的样子。</p></div><span class="preview-device">桌面端</span></div><div class="site-preview" style={`background-image:linear-gradient(180deg,rgba(30,20,35,.08),rgba(30,20,35,.7)),url('${settings.desktopBg}')`}><div class="preview-nav"><b>✦ {settings.siteTitle}</b><span>首页　归档　关于</span><i>☰</i></div><div class="preview-center"><span>WELCOME TO MY BLOG</span><strong>{settings.subtitle}</strong><small>{settings.announcement}</small><button>探索文章　→</button></div></div></section></div>
 			{:else if view === "settings"}
 				<section class="page-heading"><div><p class="eyebrow">CONFIGURATION</p><h1>站点设置</h1><p class="subcopy">管理博客信息、发布工具和本地数据。</p></div></section>
-				<div class="settings-layout"><section class="panel settings-form"><div class="panel-heading"><div><h2>基本信息</h2><p>这些内容会显示在博客首页和 SEO 信息中。</p></div></div><label for="site-title">站点名称</label><input id="site-title" class="form-input" value={settings.siteTitle} on:change={(event) => updateSettings("siteTitle", (event.currentTarget as HTMLInputElement).value)} /><label for="subtitle">站点副标题</label><input id="subtitle" class="form-input" value={settings.subtitle} on:change={(event) => updateSettings("subtitle", (event.currentTarget as HTMLInputElement).value)} /><label for="author">作者名称</label><input id="author" class="form-input" value={settings.author} on:change={(event) => updateSettings("author", (event.currentTarget as HTMLInputElement).value)} /><label for="description">站点描述</label><textarea id="description" class="form-input textarea-small" on:change={(event) => updateSettings("description", (event.currentTarget as HTMLTextAreaElement).value)}>{settings.description}</textarea><label for="announcement">首页公告</label><textarea id="announcement" class="form-input textarea-small" on:change={(event) => updateSettings("announcement", (event.currentTarget as HTMLTextAreaElement).value)}>{settings.announcement}</textarea></section><section class="settings-side"><div class="panel publish-panel"><div class="publish-mark">↗</div><h2>发布到线上</h2><p>发布会把文章、设置和图片转换为源码，提交到 GitHub 后由 Actions 自动部署。</p>{#if githubStatus === "connected"}<button class="primary-button wide" on:click={publishToGitHub}>发布到 GitHub <span>→</span></button><button class="secondary-button wide" on:click={logoutGitHub}>退出 GitHub（{githubLogin}）</button>{:else if githubStatus === "publishing"}<button class="primary-button wide" disabled>正在提交 GitHub…</button>{:else if githubStatus === "loading"}<button class="secondary-button wide" disabled>检查 GitHub 连接…</button>{:else}<a href="/api/auth/github/start" class="primary-button wide">连接 GitHub <span>→</span></a>{/if}<button class="secondary-button wide" on:click={exportBackup}>导出内容备份 <span>↓</span></button><a href="https://github.com/FlatWalnut/firefly-blog" target="_blank" rel="noreferrer" class="secondary-button wide">打开 GitHub 仓库 ↗</a><div class="publish-note"><span>●</span>{githubStatus === "connected" ? `已连接 ${githubLogin}` : "未连接 GitHub 账号，Token 只保存在服务端会话中"}</div></div><div class="panel danger-panel"><h3>数据管理</h3><p>清除本地缓存会恢复为源代码中的初始数据。</p><button class="danger-button" on:click={clearLocalData}>清除本地缓存</button></div></section></div>
+				<div class="settings-layout"><section class="panel settings-form"><div class="panel-heading"><div><h2>基本信息</h2><p>这些内容会显示在博客首页和 SEO 信息中。</p></div></div><label for="site-title">站点名称</label><input id="site-title" class="form-input" value={settings.siteTitle} on:change={(event) => updateSettings("siteTitle", (event.currentTarget as HTMLInputElement).value)} /><label for="subtitle">站点副标题</label><input id="subtitle" class="form-input" value={settings.subtitle} on:change={(event) => updateSettings("subtitle", (event.currentTarget as HTMLInputElement).value)} /><label for="author">作者名称</label><input id="author" class="form-input" value={settings.author} on:change={(event) => updateSettings("author", (event.currentTarget as HTMLInputElement).value)} /><label for="description">站点描述</label><textarea id="description" class="form-input textarea-small" on:change={(event) => updateSettings("description", (event.currentTarget as HTMLTextAreaElement).value)}>{settings.description}</textarea><label for="announcement">首页公告</label><textarea id="announcement" class="form-input textarea-small" on:change={(event) => updateSettings("announcement", (event.currentTarget as HTMLTextAreaElement).value)}>{settings.announcement}</textarea></section><section class="settings-side"><div class="panel publish-panel"><div class="publish-mark">↗</div><h2>发布到线上</h2><p>发布会把文章、设置和图片转换为源码，提交到 GitHub 后由 Actions 自动部署。</p>{#if githubStatus === "connected"}<button class="primary-button wide" on:click={publishToGitHub}>发布到 GitHub <span>→</span></button><button class="secondary-button wide" on:click={logoutGitHub}>退出 GitHub（{githubLogin}）</button>{:else if githubStatus === "publishing"}<button class="primary-button wide" disabled>正在提交 GitHub…</button>{:else if githubStatus === "loading"}<button class="secondary-button wide" disabled>检查 GitHub 连接…</button>{:else if githubConfigured}<a href="/api/auth/github/start" class="primary-button wide">连接 GitHub <span>→</span></a>{:else}<button class="secondary-button wide" on:click={() => showToast("线上 GitHub 配置未完成，请检查 Cloudflare Pages 环境变量")}>GitHub 配置未完成</button>{/if}<button class="secondary-button wide" on:click={exportBackup}>导出内容备份 <span>↓</span></button><a href="https://github.com/FlatWalnut/firefly-blog" target="_blank" rel="noreferrer" class="secondary-button wide">打开 GitHub 仓库 ↗</a><div class="publish-note"><span>●</span>{githubStatus === "connected" ? `已连接 ${githubLogin}` : "未连接 GitHub 账号，Token 只保存在服务端会话中"}</div></div><div class="panel danger-panel"><h3>数据管理</h3><p>清除本地缓存会恢复为源代码中的初始数据。</p><button class="danger-button" on:click={clearLocalData}>清除本地缓存</button></div></section></div>
 			{/if}
 		</div>
 	</main>
