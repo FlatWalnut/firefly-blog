@@ -493,6 +493,7 @@ async function publishToGitHub() {
 		return;
 	}
 	githubStatus = "publishing";
+	let requiresReconnect = false;
 	try {
 		const response = await fetch("/api/publish", {
 			method: "POST",
@@ -503,20 +504,31 @@ async function publishToGitHub() {
 			body: JSON.stringify({ backup: { posts, settings, media } }),
 		});
 		const responseText = await response.text();
-		let result: { ok?: boolean; error?: string };
+		let result: { ok?: boolean; error?: string; reauthorize?: boolean };
 		try {
-			result = JSON.parse(responseText) as { ok?: boolean; error?: string };
+			result = JSON.parse(responseText) as {
+				ok?: boolean;
+				error?: string;
+				reauthorize?: boolean;
+			};
 		} catch {
+			requiresReconnect = response.status === 401 || response.status === 403;
 			throw new Error(
 				`发布失败（HTTP ${response.status}）：服务器返回了非 JSON 响应，请稍后重试`,
 			);
 		}
+		requiresReconnect = result.reauthorize === true;
 		if (!response.ok || !result.ok)
 			throw new Error(result.error || `发布失败（HTTP ${response.status}）`);
 		githubStatus = "connected";
 		showToast("已提交 GitHub，正在自动部署");
 	} catch (error) {
-		githubStatus = "connected";
+		if (requiresReconnect) {
+			void fetch("/api/auth/github/logout", { method: "POST" }).catch(
+				() => undefined,
+			);
+		}
+		githubStatus = requiresReconnect ? "disconnected" : "connected";
 		showToast(error instanceof Error ? error.message : "发布失败，请稍后重试");
 	}
 }

@@ -10,7 +10,7 @@ const MAX_REQUEST_BYTES = 12 * 1024 * 1024;
 export const onRequestPost = async (context: FunctionContext): Promise<Response> => {
 	const { request, env } = context;
 	const session = await getSession(request, env);
-	if (!session) return jsonResponse({ error: "GitHub account is not connected" }, 401);
+	if (!session) return jsonResponse({ error: "GitHub account is not connected", reauthorize: true }, 401);
 
 	let repository: { owner: string; repo: string };
 	let branch: string;
@@ -55,7 +55,10 @@ export const onRequestPost = async (context: FunctionContext): Promise<Response>
 				acceptedGithubPermissions: error.acceptedGithubPermissions,
 				message: error.githubMessage,
 			});
-			return jsonResponse({ error: error.userMessage }, 502);
+			return jsonResponse({
+				error: error.userMessage,
+				reauthorize: error.status === 401 || error.status === 403,
+			}, 502);
 		}
 		console.error("Blog publish failed", error instanceof Error ? error.message : "unknown error");
 		return jsonResponse({ error: error instanceof Error ? error.message : "Blog publish failed" }, 400);
