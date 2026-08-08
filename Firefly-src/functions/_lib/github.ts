@@ -7,6 +7,48 @@ type GitHubCommit = { tree?: { sha?: string } };
 type GitHubContent = { content?: string; encoding?: string };
 type GitHubError = { message?: string };
 
+const INTEGRATION_ACCESS_ERROR = "resource not accessible by integration";
+
+function redactToken(value: string): string {
+	return value.replace(/(Bearer\s+|access_token[=:]\s*)[^\s,;]+/gi, "$1[redacted]");
+}
+
+function getUserFacingMessage(status: number, githubMessage: string): string {
+	if (status === 403 && githubMessage.toLowerCase().includes(INTEGRATION_ACCESS_ERROR)) {
+		return "GitHub 拒绝了发布请求，因为当前集成没有目标仓库的写入权限。GitHub App：授予 Repository contents: Read and write，并将 App 安装到 FlatWalnut/firefly-blog；OAuth App：撤销旧授权后重新连接，公开仓库使用 public_repo，私有仓库使用 repo。完成后请重试。";
+	}
+	if (status === 401) return "GitHub 授权已失效，请重新连接 GitHub 后重试。";
+	if (status === 403) return "GitHub 拒绝了发布请求，请检查当前账号对目标仓库的写入权限后重试。";
+	return `GitHub 发布请求失败（HTTP ${status}），请稍后重试。`;
+}
+
+export class GitHubApiError extends Error {
+	readonly status: number;
+	readonly endpoint: string;
+	readonly oauthScopes: string | null;
+	readonly acceptedOauthScopes: string | null;
+	readonly githubMessage: string;
+	readonly userMessage: string;
+
+	constructor(options: {
+		status: number;
+		endpoint: string;
+		oauthScopes: string | null;
+		acceptedOauthScopes: string | null;
+		githubMessage: string;
+	}) {
+		const githubMessage = redactToken(options.githubMessage);
+		super(getUserFacingMessage(options.status, githubMessage));
+		this.name = "GitHubApiError";
+		this.status = options.status;
+		this.endpoint = options.endpoint;
+		this.oauthScopes = options.oauthScopes;
+		this.acceptedOauthScopes = options.acceptedOauthScopes;
+		this.githubMessage = githubMessage;
+		this.userMessage = this.message;
+	}
+}
+
 function apiUrl(owner: string, repo: string, path: string): string {
 	return `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}${path}`;
 }
@@ -25,13 +67,21 @@ async function githubFetch<T>(token: string, url: string, init: RequestInit = {}
 	});
 	if (!response.ok) {
 		let message = `GitHub API returned ${response.status}`;
+		const oauthScopes = response.headers.get("X-OAuth-Scopes");
+		const acceptedOauthScopes = response.headers.get("X-Accepted-OAuth-Scopes");
 		try {
 			const error = (await response.json()) as GitHubError;
 			if (error.message) message = error.message;
 		} catch {
 			// Keep the generic status when GitHub does not return JSON.
 		}
-		throw new Error(message);
+		throw new GitHubApiError({
+			status: response.status,
+			endpoint: url,
+			oauthScopes,
+			acceptedOauthScopes,
+			githubMessage: message,
+		});
 	}
 	return (await response.json()) as T;
 }
@@ -72,7 +122,7 @@ async function readPreviousManifest(
 		const parsed = JSON.parse(base64ToUtf8(result.content)) as { paths?: unknown };
 		return Array.isArray(parsed.paths) ? parsed.paths.filter((path): path is string => typeof path === "string") : [];
 	} catch (error) {
-		if (error instanceof Error && error.message.toLowerCase().includes("not found")) return [];
+		if (error instanceof GitHubApiError && error.status === 404) return [];
 		throw error;
 	}
 }

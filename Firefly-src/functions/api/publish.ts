@@ -1,7 +1,7 @@
 import { buildPublishBundle } from "../_lib/backup";
 import { getSession, jsonResponse } from "../_lib/auth";
 import { getBranch, getRepository, type PublishEnv } from "../_lib/env";
-import { publishBundle } from "../_lib/github";
+import { GitHubApiError, publishBundle } from "../_lib/github";
 
 type FunctionContext = { request: Request; env: PublishEnv };
 
@@ -46,8 +46,17 @@ export const onRequestPost = async (context: FunctionContext): Promise<Response>
 		});
 		return jsonResponse({ ok: true, ...result, branch, repository: `${repository.owner}/${repository.repo}` });
 	} catch (error) {
+		if (error instanceof GitHubApiError) {
+			console.error("Blog publish failed", {
+				status: error.status,
+				endpoint: error.endpoint,
+				oauthScopes: error.oauthScopes,
+				acceptedOauthScopes: error.acceptedOauthScopes,
+				message: error.githubMessage,
+			});
+			return jsonResponse({ error: error.userMessage }, 502);
+		}
 		console.error("Blog publish failed", error instanceof Error ? error.message : "unknown error");
-		const message = error instanceof Error ? error.message : "Blog publish failed";
-		return jsonResponse({ error: message }, message.includes("GitHub") ? 502 : 400);
+		return jsonResponse({ error: error instanceof Error ? error.message : "Blog publish failed" }, 400);
 	}
 };
