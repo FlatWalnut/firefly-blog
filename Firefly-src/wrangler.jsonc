@@ -1,0 +1,12 @@
+{
+	"name": "firefly",
+	"compatibility_date": "2025-01-01",
+	"compatibility_flags": ["nodejs_compat"],
+	"vars": {
+		"GITHUB_REPOSITORY": "FlatWalnut/firefly-blog",
+		"GITHUB_BRANCH": "main",
+		"GITHUB_OAUTH_SCOPE": "public_repo",
+		"GITHUB_ALLOWED_LOGIN": "FlatWalnut"
+	},
+	"pages_build_output_dir": "./dist"
+}
