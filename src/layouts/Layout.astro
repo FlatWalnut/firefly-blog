@@ -170,6 +170,42 @@ const siteLang = lang.replace("_", "-");
       name="twitter:description"
       content={description || siteConfig.description || pageTitle}
     />
+		<script is:inline>
+			// Prefer same-browser settings, then fall back to the published static settings file.
+			(function applyLocalAdminSettings() {
+				try {
+					const raw = localStorage.getItem("firefly-admin-settings");
+					if (!raw) return;
+					const settings = JSON.parse(raw);
+					if (settings.accent) {
+						document.documentElement.style.setProperty("--primary", settings.accent);
+						document.documentElement.style.setProperty("--admin-accent", settings.accent);
+					}
+					if (settings.siteTitle) {
+						document.documentElement.dataset.adminSiteTitle = settings.siteTitle;
+						document.title = `${settings.siteTitle} - ${settings.subtitle || ""}`.replace(/ - $/, "");
+						return true;
+					}
+				} catch {
+					// Ignore malformed cache and keep the build-time configuration.
+				}
+				return false;
+			})();
+			fetch("/admin-settings.json", { cache: "no-store" })
+				.then((response) => response.ok ? response.json() : null)
+				.then((settings) => {
+					if (!settings || localStorage.getItem("firefly-admin-settings")) return;
+					if (settings.accent) {
+						document.documentElement.style.setProperty("--primary", settings.accent);
+						document.documentElement.style.setProperty("--admin-accent", settings.accent);
+					}
+					if (settings.siteTitle) {
+						document.documentElement.dataset.adminSiteTitle = settings.siteTitle;
+						document.title = `${settings.siteTitle} - ${settings.subtitle || ""}`.replace(/ - $/, "");
+					}
+				})
+				.catch(() => undefined);
+		</script>
 
     <meta name="viewport" content="width=device-width" />
     <meta name="generator" content={Astro.generator} />

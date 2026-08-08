@@ -943,6 +943,84 @@ const hasMultipleImages =
 
 <FloatingControls headings={headings} encrypted={encrypted} />
 
+<!-- Same-origin local sync with a published static settings fallback. -->
+<script is:inline data-swup-ignore-script>
+    (function initLocalAdminSync() {
+        function readSettings() {
+            try {
+                var raw = localStorage.getItem('firefly-admin-settings');
+                return raw ? JSON.parse(raw) : null;
+            } catch (_error) {
+                return null;
+            }
+        }
+
+        function replaceImage(selector, source) {
+            if (!source) return;
+            document.querySelectorAll(selector).forEach(function (image) {
+                image.setAttribute('src', source);
+                image.removeAttribute('srcset');
+                image.style.setProperty('object-fit', 'cover');
+            });
+        }
+
+        function applySettings(settings) {
+            if (!settings) return;
+            if (settings.accent) {
+                document.documentElement.style.setProperty('--primary', settings.accent);
+                document.documentElement.style.setProperty('--admin-accent', settings.accent);
+            }
+
+            if (settings.siteTitle) {
+                var navbarTitle = document.querySelector('#navbar a[href="/"] > div');
+                if (navbarTitle) {
+                    Array.from(navbarTitle.childNodes).forEach(function (node) {
+                        if (node.nodeType === Node.TEXT_NODE && node.textContent.trim()) node.textContent = settings.siteTitle;
+                    });
+                }
+                var bannerTitle = document.querySelector('.banner-title');
+                if (bannerTitle) bannerTitle.textContent = settings.siteTitle;
+            }
+
+            if (settings.subtitle) {
+                var bannerSubtitle = document.querySelector('#banner-subtitle');
+                if (bannerSubtitle) bannerSubtitle.textContent = settings.subtitle;
+            }
+
+            replaceImage('.banner-image-slot-desktop img#banner', settings.desktopBg);
+            replaceImage('.banner-image-slot-mobile img', settings.mobileBg);
+
+            if (settings.description) {
+                var descriptionMeta = document.querySelector('meta[name="description"]');
+                if (descriptionMeta) descriptionMeta.setAttribute('content', settings.description);
+            }
+        }
+
+        function applyLocalSettings() {
+            applySettings(readSettings());
+        }
+
+        function applyPublishedSettings() {
+            if (readSettings()) return;
+            fetch('/admin-settings.json', { cache: 'no-store' })
+                .then(function (response) { return response.ok ? response.json() : null; })
+                .then(function (settings) { if (!readSettings()) applySettings(settings); })
+                .catch(function () { /* The static build may not include published settings yet. */ });
+        }
+
+        function applyAllSettings() {
+            applyLocalSettings();
+            applyPublishedSettings();
+        }
+
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', applyAllSettings, { once: true });
+        else applyAllSettings();
+        window.addEventListener('storage', applyAllSettings);
+        window.addEventListener('firefly-admin-sync', applyAllSettings);
+        document.addEventListener('astro:page-load', applyAllSettings);
+    })();
+</script>
+
 <!--
     触屏设备上让代码块的复制按钮默认隐藏，点一下代码块才显形。
     expressive-code 没给 <pre> 加 tabindex，点击代码区不会产生焦点，
