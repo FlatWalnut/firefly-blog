@@ -1,6 +1,7 @@
-import type { PublishEnv } from "../../../_lib/env";
+import { getRepository, type PublishEnv } from "../../../_lib/env";
 import {
 	constantTimeEqual,
+	clearAuthCookies,
 	createSessionCookie,
 	getStateCookie,
 	jsonResponse,
@@ -9,6 +10,16 @@ import {
 type FunctionContext = { request: Request; env: PublishEnv };
 type GitHubTokenResponse = { access_token?: string; error?: string };
 type GitHubUser = { login?: string };
+type GitHubRepository = { permissions?: { push?: boolean } };
+
+function authErrorRedirect(request: Request, reason: string): Response {
+	const location = new URL("/admin/", request.url);
+	location.searchParams.set("github", "error");
+	location.searchParams.set("reason", reason);
+	const response = new Response(null, { status: 302, headers: { Location: location.toString() } });
+	for (const [key, value] of clearAuthCookies(request)) response.headers.append(key, value);
+	return response;
+}
 
 export const onRequestGet = async (context: FunctionContext): Promise<Response> => {
 	const { request, env } = context;
@@ -45,6 +56,30 @@ export const onRequestGet = async (context: FunctionContext): Promise<Response> 
 		if (!userResponse.ok) return jsonResponse({ error: "Could not read GitHub user" }, 502);
 		const user = (await userResponse.json()) as GitHubUser;
 		if (!user.login) return jsonResponse({ error: "GitHub user has no login" }, 502);
+
+		let repository: { owner: string; repo: string };
+		try {
+			repository = getRepository(env);
+		} catch {
+			return jsonResponse({ error: "Publishing repository is not configured" }, 503);
+		}
+		const repositoryResponse = await fetch(
+			`https://api.github.com/repos/${encodeURIComponent(repository.owner)}/${encodeURIComponent(repository.repo)}`,
+			{
+				headers: {
+					Accept: "application/vnd.github+json",
+					Authorization: `Bearer ${token.access_token}`,
+					"X-GitHub-Api-Version": "2022-11-28",
+					"User-Agent": "Firefly-blog-publisher",
+				},
+			},
+		);
+		if (!repositoryResponse.ok) {
+			if (repositoryResponse.status === 403) return authErrorRedirect(request, "integration-access");
+			return authErrorRedirect(request, "repository-unavailable");
+		}
+		const repositoryInfo = (await repositoryResponse.json()) as GitHubRepository;
+		if (repositoryInfo.permissions?.push !== true) return authErrorRedirect(request, "repository-read-only");
 
 		const sessionCookie = await createSessionCookie(request, env, { login: user.login, token: token.access_token });
 		const response = new Response(null, { status: 302, headers: { Location: "/admin/?github=connected" } });
