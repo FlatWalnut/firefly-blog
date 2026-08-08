@@ -1,5 +1,5 @@
 import type { PublishEnv } from "../../../_lib/env";
-import { setStateCookie } from "../../../_lib/auth";
+import { clearAuthCookies, setStateCookie } from "../../../_lib/auth";
 
 type FunctionContext = { request: Request; env: PublishEnv };
 
@@ -18,6 +18,7 @@ export const onRequestGet = (context: FunctionContext): Response => {
 	}
 	authorize.searchParams.set("state", state);
 	const response = new Response(null, { status: 302, headers: { Location: authorize.toString() } });
+	for (const [key, value] of clearAuthCookies(request)) response.headers.append(key, value);
 	response.headers.append("Set-Cookie", setStateCookie(request, state));
 	return response;
 };
