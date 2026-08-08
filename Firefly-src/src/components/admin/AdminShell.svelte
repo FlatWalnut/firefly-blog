@@ -532,7 +532,7 @@ function clearLocalData() {
 			{/each}
 		</nav>
 		<div class="sidebar-bottom">
-			<div class="deploy-mini"><span class="status-dot"></span><div><b>本地同步模式</b><small>博客会读取本浏览器设置</small></div></div>
+			<div class="deploy-mini"><span class="status-dot"></span><div><b>{githubStatus === "connected" ? "GitHub 同步已连接" : "GitHub 发布模式"}</b><small>{githubStatus === "connected" ? "发布后所有设备自动更新" : "连接 GitHub 后可同步到博客"}</small></div></div>
 			<a class="back-blog" href="/"><span>↗</span> 返回博客首页</a>
 		</div>
 	</aside>
