@@ -1,376 +1,481 @@
 <script lang="ts">
-	import { onMount } from "svelte";
+import { onMount } from "svelte";
 
-	type View = "overview" | "posts" | "media" | "appearance" | "settings";
-	type Status = "published" | "draft";
-	type Post = {
-		id: string;
-		title: string;
-		slug: string;
-		status: Status;
-		published: string;
-		updated: string;
-		description: string;
-		tags: string[];
-		category: string;
-		cover: string;
-		content: string;
-		views: number;
-		comments: number;
+type View = "overview" | "posts" | "media" | "appearance" | "settings";
+type Status = "published" | "draft";
+type Post = {
+	id: string;
+	title: string;
+	slug: string;
+	status: Status;
+	published: string;
+	updated: string;
+	description: string;
+	tags: string[];
+	category: string;
+	cover: string;
+	content: string;
+	views: number;
+	comments: number;
+};
+type Settings = {
+	siteTitle: string;
+	subtitle: string;
+	description: string;
+	author: string;
+	announcement: string;
+	desktopBg: string;
+	mobileBg: string;
+	accent: string;
+};
+type Media = { id: string; name: string; url: string; kind: "image" };
+type GitHubStatus = "loading" | "disconnected" | "connected" | "publishing";
+
+export let initialPosts: Post[] = [];
+export let desktopWallpapers: string[] = [];
+export let mobileWallpapers: string[] = [];
+
+const navItems: { id: View; label: string; icon: string }[] = [
+	{ id: "overview", label: "总览", icon: "⌂" },
+	{ id: "posts", label: "文章管理", icon: "▤" },
+	{ id: "media", label: "媒体库", icon: "▧" },
+	{ id: "appearance", label: "外观设置", icon: "✦" },
+	{ id: "settings", label: "站点设置", icon: "⚙" },
+];
+
+const fallbackDesktopWallpapers = [
+	"/assets/images/DesktopWallpaper/d1.avif",
+	"/assets/images/DesktopWallpaper/d2.avif",
+	"/assets/images/DesktopWallpaper/d3.avif",
+	"/assets/images/DesktopWallpaper/d4.avif",
+	"/assets/images/DesktopWallpaper/d5.avif",
+	"/assets/images/DesktopWallpaper/d6.avif",
+];
+const fallbackMobileWallpapers = [
+	"/assets/images/MobileWallpaper/m1.avif",
+	"/assets/images/MobileWallpaper/m2.avif",
+	"/assets/images/MobileWallpaper/m3.avif",
+	"/assets/images/MobileWallpaper/m4.avif",
+	"/assets/images/MobileWallpaper/m5.avif",
+	"/assets/images/MobileWallpaper/m6.avif",
+];
+const wallpaperOptions =
+	desktopWallpapers.length > 0 ? desktopWallpapers : fallbackDesktopWallpapers;
+const mobileWallpaperOptions =
+	mobileWallpapers.length > 0 ? mobileWallpapers : fallbackMobileWallpapers;
+
+const defaultSettings: Settings = {
+	siteTitle: "Firefly",
+	subtitle: "在微光里记录生活",
+	description: "一个清新、自由、持续生长的个人博客。",
+	author: "Firefly",
+	announcement: "欢迎来到我的小站，愿每一次记录都能留下微光。",
+	desktopBg: wallpaperOptions[0],
+	mobileBg: mobileWallpaperOptions[0],
+	accent: "#d278a3",
+};
+
+let view: View = "overview";
+let posts: Post[] = initialPosts.map((post) => ({
+	...post,
+	status: post.status as Status,
+}));
+let settings: Settings = { ...defaultSettings };
+let media: Media[] = [];
+let search = "";
+let statusFilter: "all" | Status = "all";
+let categoryFilter = "all";
+let mobileMenu = false;
+let showEditor = false;
+let editorMode: "new" | "edit" = "new";
+let editor: Post = blankPost();
+let showDelete = false;
+let deletingId = "";
+let toast = "";
+let toastTimer: ReturnType<typeof setTimeout> | undefined;
+let uploadedFileInput: HTMLInputElement;
+let backupFileInput: HTMLInputElement;
+let githubStatus: GitHubStatus = "loading";
+let githubLogin = "";
+
+function blankPost(): Post {
+	return {
+		id: `local-${Date.now()}`,
+		title: "",
+		slug: "",
+		status: "draft",
+		published: new Date().toISOString().slice(0, 10),
+		updated: new Date().toISOString().slice(0, 10),
+		description: "",
+		tags: [],
+		category: "随笔",
+		cover: wallpaperOptions[1],
+		content: "## 写下你的想法\n\n从这里开始创作……",
+		views: 0,
+		comments: 0,
 	};
-	type Settings = {
-		siteTitle: string;
-		subtitle: string;
-		description: string;
-		author: string;
-		announcement: string;
-		desktopBg: string;
-		mobileBg: string;
-		accent: string;
+}
+
+function normalizeBuiltInImage(value: string, fallback: string): string {
+	const match = value.match(/\/(Desktop|Mobile)Wallpaper\/[dm](\d+)\.avif$/i);
+	if (!match) return value;
+	const index = Number(match[2]) - 1;
+	const options =
+		match[1].toLowerCase() === "mobile"
+			? mobileWallpaperOptions
+			: wallpaperOptions;
+	return options[index] || fallback;
+}
+
+onMount(() => {
+	try {
+		const savedPosts = localStorage.getItem("firefly-admin-posts");
+		const savedSettings = localStorage.getItem("firefly-admin-settings");
+		const savedMedia = localStorage.getItem("firefly-admin-media");
+		if (savedPosts) {
+			posts = JSON.parse(savedPosts).map((post: Post) => ({
+				...post,
+				cover: normalizeBuiltInImage(post.cover, wallpaperOptions[0]),
+			}));
+		}
+		if (savedSettings) {
+			const parsedSettings = JSON.parse(savedSettings);
+			settings = {
+				...defaultSettings,
+				...parsedSettings,
+				desktopBg: normalizeBuiltInImage(
+					parsedSettings.desktopBg || defaultSettings.desktopBg,
+					defaultSettings.desktopBg,
+				),
+				mobileBg: normalizeBuiltInImage(
+					parsedSettings.mobileBg || defaultSettings.mobileBg,
+					defaultSettings.mobileBg,
+				),
+			};
+		}
+		if (savedMedia) media = JSON.parse(savedMedia);
+	} catch {
+		showToast("本地缓存读取失败，已使用默认数据");
+	}
+	void loadGitHubSession();
+});
+
+async function loadGitHubSession() {
+	try {
+		const response = await fetch("/api/auth/github/session", {
+			headers: { Accept: "application/json" },
+		});
+		const data = (await response.json()) as {
+			connected?: boolean;
+			login?: string;
+		};
+		githubStatus = data.connected ? "connected" : "disconnected";
+		githubLogin = data.login || "";
+		if (
+			new URLSearchParams(window.location.search).get("github") === "connected"
+		) {
+			window.history.replaceState({}, "", window.location.pathname);
+			showToast(`GitHub 已连接：${githubLogin}`);
+		}
+	} catch {
+		githubStatus = "disconnected";
+	}
+}
+
+$: categories = Array.from(
+	new Set(posts.map((post) => post.category).filter(Boolean)),
+);
+$: filteredPosts = posts.filter((post) => {
+	const keyword = search.trim().toLowerCase();
+	const matchesSearch =
+		!keyword ||
+		`${post.title} ${post.description} ${post.tags.join(" ")}`
+			.toLowerCase()
+			.includes(keyword);
+	const matchesStatus = statusFilter === "all" || post.status === statusFilter;
+	const matchesCategory =
+		categoryFilter === "all" || post.category === categoryFilter;
+	return matchesSearch && matchesStatus && matchesCategory;
+});
+$: publishedCount = posts.filter((post) => post.status === "published").length;
+$: draftCount = posts.filter((post) => post.status === "draft").length;
+$: totalViews = posts.reduce((sum, post) => sum + post.views, 0);
+$: editorTags = editor.tags.join(", ");
+
+function persist() {
+	localStorage.setItem("firefly-admin-posts", JSON.stringify(posts));
+	localStorage.setItem("firefly-admin-settings", JSON.stringify(settings));
+	localStorage.setItem("firefly-admin-media", JSON.stringify(media));
+	window.dispatchEvent(new CustomEvent("firefly-admin-sync"));
+}
+
+function showToast(message: string) {
+	toast = message;
+	if (toastTimer) clearTimeout(toastTimer);
+	toastTimer = setTimeout(() => (toast = ""), 2800);
+}
+
+function selectView(nextView: View) {
+	view = nextView;
+	mobileMenu = false;
+}
+
+function openNewPost() {
+	editorMode = "new";
+	editor = blankPost();
+	showEditor = true;
+}
+
+function openEdit(post: Post) {
+	editorMode = "edit";
+	editor = { ...post, tags: [...post.tags] };
+	showEditor = true;
+}
+
+function updateEditor<K extends keyof Post>(key: K, value: Post[K]) {
+	editor = { ...editor, [key]: value };
+}
+
+function savePost() {
+	if (!editor.title.trim()) {
+		showToast("请先填写文章标题");
+		return;
+	}
+	const cleanSlug = (editor.slug || editor.title)
+		.trim()
+		.toLowerCase()
+		.replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-")
+		.replace(/^-|-$/g, "");
+	const saved = {
+		...editor,
+		slug: cleanSlug || `post-${Date.now()}`,
+		updated: new Date().toISOString().slice(0, 10),
 	};
-	type Media = { id: string; name: string; url: string; kind: "image" };
-	type GitHubStatus = "loading" | "disconnected" | "connected" | "publishing";
+	if (editorMode === "new") posts = [saved, ...posts];
+	else posts = posts.map((post) => (post.id === saved.id ? saved : post));
+	persist();
+	showEditor = false;
+	showToast(editorMode === "new" ? "文章已保存为草稿" : "文章已更新");
+}
 
-	export let initialPosts: Post[] = [];
-	export let desktopWallpapers: string[] = [];
-	export let mobileWallpapers: string[] = [];
+function publishPost(post: Post) {
+	posts = posts.map((item) =>
+		item.id === post.id
+			? {
+					...item,
+					status: "published",
+					updated: new Date().toISOString().slice(0, 10),
+				}
+			: item,
+	);
+	persist();
+	showToast("文章已标记为已发布，可继续导出并部署");
+}
 
-	const navItems: { id: View; label: string; icon: string }[] = [
-		{ id: "overview", label: "总览", icon: "⌂" },
-		{ id: "posts", label: "文章管理", icon: "▤" },
-		{ id: "media", label: "媒体库", icon: "▧" },
-		{ id: "appearance", label: "外观设置", icon: "✦" },
-		{ id: "settings", label: "站点设置", icon: "⚙" },
-	];
+function askDelete(id: string) {
+	deletingId = id;
+	showDelete = true;
+}
 
-	const fallbackDesktopWallpapers = [
-		"/assets/images/DesktopWallpaper/d1.avif",
-		"/assets/images/DesktopWallpaper/d2.avif",
-		"/assets/images/DesktopWallpaper/d3.avif",
-		"/assets/images/DesktopWallpaper/d4.avif",
-		"/assets/images/DesktopWallpaper/d5.avif",
-		"/assets/images/DesktopWallpaper/d6.avif",
-	];
-	const fallbackMobileWallpapers = [
-		"/assets/images/MobileWallpaper/m1.avif",
-		"/assets/images/MobileWallpaper/m2.avif",
-		"/assets/images/MobileWallpaper/m3.avif",
-		"/assets/images/MobileWallpaper/m4.avif",
-		"/assets/images/MobileWallpaper/m5.avif",
-		"/assets/images/MobileWallpaper/m6.avif",
-	];
-	const wallpaperOptions = desktopWallpapers.length > 0 ? desktopWallpapers : fallbackDesktopWallpapers;
-	const mobileWallpaperOptions = mobileWallpapers.length > 0 ? mobileWallpapers : fallbackMobileWallpapers;
+function confirmDelete() {
+	posts = posts.filter((post) => post.id !== deletingId);
+	persist();
+	showDelete = false;
+	showToast("文章已移入回收站");
+}
 
-	const defaultSettings: Settings = {
-		siteTitle: "Firefly",
-		subtitle: "在微光里记录生活",
-		description: "一个清新、自由、持续生长的个人博客。",
-		author: "Firefly",
-		announcement: "欢迎来到我的小站，愿每一次记录都能留下微光。",
-		desktopBg: wallpaperOptions[0],
-		mobileBg: mobileWallpaperOptions[0],
-		accent: "#d278a3",
-	};
-
-	let view: View = "overview";
-	let posts: Post[] = initialPosts.map((post) => ({ ...post, status: post.status as Status }));
-	let settings: Settings = { ...defaultSettings };
-	let media: Media[] = [];
-	let search = "";
-	let statusFilter: "all" | Status = "all";
-	let categoryFilter = "all";
-	let mobileMenu = false;
-	let showEditor = false;
-	let editorMode: "new" | "edit" = "new";
-	let editor: Post = blankPost();
-	let showDelete = false;
-	let deletingId = "";
-	let toast = "";
-	let toastTimer: ReturnType<typeof setTimeout> | undefined;
-	let uploadedFileInput: HTMLInputElement;
-	let backupFileInput: HTMLInputElement;
-	let githubStatus: GitHubStatus = "loading";
-	let githubLogin = "";
-
-	function blankPost(): Post {
-		return {
+function duplicatePost(post: Post) {
+	posts = [
+		{
+			...post,
 			id: `local-${Date.now()}`,
-			title: "",
-			slug: "",
+			title: `${post.title}（副本）`,
+			slug: `${post.slug}-copy`,
 			status: "draft",
-			published: new Date().toISOString().slice(0, 10),
 			updated: new Date().toISOString().slice(0, 10),
-			description: "",
-			tags: [],
-			category: "随笔",
-			cover: wallpaperOptions[1],
-			content: "## 写下你的想法\n\n从这里开始创作……",
 			views: 0,
 			comments: 0,
-		};
-	}
+		},
+		...posts,
+	];
+	persist();
+	showToast("已创建文章副本");
+}
 
-	function normalizeBuiltInImage(value: string, fallback: string): string {
-		const match = value.match(/\/(Desktop|Mobile)Wallpaper\/[dm](\d+)\.avif$/i);
-		if (!match) return value;
-		const index = Number(match[2]) - 1;
-		const options = match[1].toLowerCase() === "mobile" ? mobileWallpaperOptions : wallpaperOptions;
-		return options[index] || fallback;
-	}
+function updateSettings<K extends keyof Settings>(key: K, value: Settings[K]) {
+	settings = { ...settings, [key]: value };
+	persist();
+	showToast("站点设置已保存");
+}
 
-	onMount(() => {
-		try {
-			const savedPosts = localStorage.getItem("firefly-admin-posts");
-			const savedSettings = localStorage.getItem("firefly-admin-settings");
-			const savedMedia = localStorage.getItem("firefly-admin-media");
-			if (savedPosts) {
-				posts = JSON.parse(savedPosts).map((post: Post) => ({
-					...post,
-					cover: normalizeBuiltInImage(post.cover, wallpaperOptions[0]),
-				}));
-			}
-			if (savedSettings) {
-				const parsedSettings = JSON.parse(savedSettings);
-				settings = {
-					...defaultSettings,
-					...parsedSettings,
-					desktopBg: normalizeBuiltInImage(parsedSettings.desktopBg || defaultSettings.desktopBg, defaultSettings.desktopBg),
-					mobileBg: normalizeBuiltInImage(parsedSettings.mobileBg || defaultSettings.mobileBg, defaultSettings.mobileBg),
-				};
-			}
-			if (savedMedia) media = JSON.parse(savedMedia);
-		} catch {
-			showToast("本地缓存读取失败，已使用默认数据");
-		}
-		void loadGitHubSession();
+function handleUpload(event: Event) {
+	const input = event.currentTarget as HTMLInputElement;
+	const file = input.files?.[0];
+	if (!file) return;
+	const reader = new FileReader();
+	reader.onload = () => {
+		media = [
+			{
+				id: `media-${Date.now()}`,
+				name: file.name,
+				url: String(reader.result),
+				kind: "image",
+			},
+			...media,
+		];
+		persist();
+		showToast("图片已加入本地媒体库");
+	};
+	reader.readAsDataURL(file);
+	input.value = "";
+}
+
+function useMedia(url: string) {
+	if (showEditor) updateEditor("cover", url);
+	else updateSettings("desktopBg", url);
+	showToast(showEditor ? "已设为封面图" : "已设为桌面背景");
+}
+
+function exportBackup() {
+	const blob = new Blob([JSON.stringify({ posts, settings, media }, null, 2)], {
+		type: "application/json",
 	});
+	const url = URL.createObjectURL(blob);
+	const link = document.createElement("a");
+	link.href = url;
+	link.download = `firefly-backup-${new Date().toISOString().slice(0, 10)}.json`;
+	link.click();
+	URL.revokeObjectURL(url);
+	showToast("备份文件已下载");
+}
 
-	async function loadGitHubSession() {
-		try {
-			const response = await fetch("/api/auth/github/session", { headers: { Accept: "application/json" } });
-			const data = (await response.json()) as { connected?: boolean; login?: string };
-			githubStatus = data.connected ? "connected" : "disconnected";
-			githubLogin = data.login || "";
-			if (new URLSearchParams(window.location.search).get("github") === "connected") {
-				window.history.replaceState({}, "", window.location.pathname);
-				showToast(`GitHub 已连接：${githubLogin}`);
-			}
-		} catch {
-			githubStatus = "disconnected";
-		}
-	}
-
-	$: categories = Array.from(new Set(posts.map((post) => post.category).filter(Boolean)));
-	$: filteredPosts = posts.filter((post) => {
-		const keyword = search.trim().toLowerCase();
-		const matchesSearch = !keyword || `${post.title} ${post.description} ${post.tags.join(" ")}`.toLowerCase().includes(keyword);
-		const matchesStatus = statusFilter === "all" || post.status === statusFilter;
-		const matchesCategory = categoryFilter === "all" || post.category === categoryFilter;
-		return matchesSearch && matchesStatus && matchesCategory;
-	});
-	$: publishedCount = posts.filter((post) => post.status === "published").length;
-	$: draftCount = posts.filter((post) => post.status === "draft").length;
-	$: totalViews = posts.reduce((sum, post) => sum + post.views, 0);
-	$: editorTags = editor.tags.join(", ");
-
-	function persist() {
-		localStorage.setItem("firefly-admin-posts", JSON.stringify(posts));
-		localStorage.setItem("firefly-admin-settings", JSON.stringify(settings));
-		localStorage.setItem("firefly-admin-media", JSON.stringify(media));
-		window.dispatchEvent(new CustomEvent("firefly-admin-sync"));
-	}
-
-	function showToast(message: string) {
-		toast = message;
-		if (toastTimer) clearTimeout(toastTimer);
-		toastTimer = setTimeout(() => (toast = ""), 2800);
-	}
-
-	function selectView(nextView: View) {
-		view = nextView;
-		mobileMenu = false;
-	}
-
-	function openNewPost() {
-		editorMode = "new";
-		editor = blankPost();
-		showEditor = true;
-	}
-
-	function openEdit(post: Post) {
-		editorMode = "edit";
-		editor = { ...post, tags: [...post.tags] };
-		showEditor = true;
-	}
-
-	function updateEditor<K extends keyof Post>(key: K, value: Post[K]) {
-		editor = { ...editor, [key]: value };
-	}
-
-	function savePost() {
-		if (!editor.title.trim()) {
-			showToast("请先填写文章标题");
-			return;
-		}
-		const cleanSlug = (editor.slug || editor.title)
-			.trim()
-			.toLowerCase()
-			.replace(/[^a-z0-9\u4e00-\u9fa5]+/g, "-")
-			.replace(/^-|-$/g, "");
-		const saved = { ...editor, slug: cleanSlug || `post-${Date.now()}`, updated: new Date().toISOString().slice(0, 10) };
-		if (editorMode === "new") posts = [saved, ...posts];
-		else posts = posts.map((post) => (post.id === saved.id ? saved : post));
-		persist();
-		showEditor = false;
-		showToast(editorMode === "new" ? "文章已保存为草稿" : "文章已更新");
-	}
-
-	function publishPost(post: Post) {
-		posts = posts.map((item) => item.id === post.id ? { ...item, status: "published", updated: new Date().toISOString().slice(0, 10) } : item);
-		persist();
-		showToast("文章已标记为已发布，可继续导出并部署");
-	}
-
-	function askDelete(id: string) {
-		deletingId = id;
-		showDelete = true;
-	}
-
-	function confirmDelete() {
-		posts = posts.filter((post) => post.id !== deletingId);
-		persist();
-		showDelete = false;
-		showToast("文章已移入回收站");
-	}
-
-	function duplicatePost(post: Post) {
-		posts = [{ ...post, id: `local-${Date.now()}`, title: `${post.title}（副本）`, slug: `${post.slug}-copy`, status: "draft", updated: new Date().toISOString().slice(0, 10), views: 0, comments: 0 }, ...posts];
-		persist();
-		showToast("已创建文章副本");
-	}
-
-	function updateSettings<K extends keyof Settings>(key: K, value: Settings[K]) {
-		settings = { ...settings, [key]: value };
-		persist();
-		showToast("站点设置已保存");
-	}
-
-	function handleUpload(event: Event) {
-		const input = event.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
-		const reader = new FileReader();
-		reader.onload = () => {
-			media = [{ id: `media-${Date.now()}`, name: file.name, url: String(reader.result), kind: "image" }, ...media];
-			persist();
-			showToast("图片已加入本地媒体库");
+async function importBackup(event: Event) {
+	const input = event.currentTarget as HTMLInputElement;
+	const file = input.files?.[0];
+	if (!file) return;
+	try {
+		const raw = JSON.parse(await file.text()) as {
+			posts?: unknown;
+			settings?: unknown;
+			media?: unknown;
 		};
-		reader.readAsDataURL(file);
+		if (!Array.isArray(raw.posts)) throw new Error("备份缺少文章列表");
+		const importedPosts = raw.posts.map((value, index) => {
+			if (!value || typeof value !== "object")
+				throw new Error(`第 ${index + 1} 篇文章格式错误`);
+			const post = value as Partial<Post>;
+			return {
+				id:
+					typeof post.id === "string"
+						? post.id
+						: `imported-${Date.now()}-${index}`,
+				title: typeof post.title === "string" ? post.title : "未命名文章",
+				slug: typeof post.slug === "string" ? post.slug : `post-${index + 1}`,
+				status:
+					post.status === "published"
+						? ("published" as const)
+						: ("draft" as const),
+				published:
+					typeof post.published === "string"
+						? post.published
+						: new Date().toISOString().slice(0, 10),
+				updated:
+					typeof post.updated === "string"
+						? post.updated
+						: new Date().toISOString().slice(0, 10),
+				description:
+					typeof post.description === "string" ? post.description : "",
+				tags: Array.isArray(post.tags)
+					? post.tags.filter((tag): tag is string => typeof tag === "string")
+					: [],
+				category: typeof post.category === "string" ? post.category : "随笔",
+				cover:
+					typeof post.cover === "string" ? post.cover : wallpaperOptions[0],
+				content: typeof post.content === "string" ? post.content : "",
+				views: typeof post.views === "number" ? post.views : 0,
+				comments: typeof post.comments === "number" ? post.comments : 0,
+			};
+		});
+		const importedSettings =
+			raw.settings && typeof raw.settings === "object"
+				? (raw.settings as Partial<Settings>)
+				: {};
+		const importedMedia = Array.isArray(raw.media)
+			? raw.media.filter((value): value is Media => {
+					if (!value || typeof value !== "object") return false;
+					const mediaItem = value as Partial<Media>;
+					return (
+						typeof mediaItem.name === "string" &&
+						typeof mediaItem.url === "string" &&
+						mediaItem.kind === "image"
+					);
+				})
+			: [];
+		posts = importedPosts;
+		settings = { ...defaultSettings, ...importedSettings };
+		media = importedMedia;
+		persist();
+		showToast(`已导入 ${posts.length} 篇文章，可继续发布`);
+	} catch (error) {
+		showToast(error instanceof Error ? error.message : "备份文件格式错误");
+	} finally {
 		input.value = "";
 	}
+}
 
-	function useMedia(url: string) {
-		if (showEditor) updateEditor("cover", url);
-		else updateSettings("desktopBg", url);
-		showToast(showEditor ? "已设为封面图" : "已设为桌面背景");
+async function publishToGitHub() {
+	if (githubStatus === "loading" || githubStatus === "publishing") return;
+	if (githubStatus !== "connected") {
+		window.location.href = "/api/auth/github/start";
+		return;
 	}
+	githubStatus = "publishing";
+	try {
+		const response = await fetch("/api/publish", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+				Accept: "application/json",
+			},
+			body: JSON.stringify({ backup: { posts, settings, media } }),
+		});
+		const result = (await response.json()) as { ok?: boolean; error?: string };
+		if (!response.ok || !result.ok) throw new Error(result.error || "发布失败");
+		githubStatus = "connected";
+		showToast("已提交 GitHub，正在自动部署");
+	} catch (error) {
+		githubStatus = "connected";
+		showToast(error instanceof Error ? error.message : "发布失败，请稍后重试");
+	}
+}
 
-	function exportBackup() {
-		const blob = new Blob([JSON.stringify({ posts, settings, media }, null, 2)], { type: "application/json" });
-		const url = URL.createObjectURL(blob);
-		const link = document.createElement("a");
-		link.href = url;
-		link.download = `firefly-backup-${new Date().toISOString().slice(0, 10)}.json`;
-		link.click();
-		URL.revokeObjectURL(url);
-		showToast("备份文件已下载");
-	}
+async function logoutGitHub() {
+	await fetch("/api/auth/github/logout", { method: "POST" }).catch(
+		() => undefined,
+	);
+	githubStatus = "disconnected";
+	githubLogin = "";
+	showToast("已退出 GitHub");
+}
 
-	async function importBackup(event: Event) {
-		const input = event.currentTarget as HTMLInputElement;
-		const file = input.files?.[0];
-		if (!file) return;
-		try {
-			const raw = JSON.parse(await file.text()) as { posts?: unknown; settings?: unknown; media?: unknown };
-			if (!Array.isArray(raw.posts)) throw new Error("备份缺少文章列表");
-			const importedPosts = raw.posts.map((value, index) => {
-				if (!value || typeof value !== "object") throw new Error(`第 ${index + 1} 篇文章格式错误`);
-				const post = value as Partial<Post>;
-				return {
-					id: typeof post.id === "string" ? post.id : `imported-${Date.now()}-${index}`,
-					title: typeof post.title === "string" ? post.title : "未命名文章",
-					slug: typeof post.slug === "string" ? post.slug : `post-${index + 1}`,
-					status: post.status === "published" ? "published" as const : "draft" as const,
-					published: typeof post.published === "string" ? post.published : new Date().toISOString().slice(0, 10),
-					updated: typeof post.updated === "string" ? post.updated : new Date().toISOString().slice(0, 10),
-					description: typeof post.description === "string" ? post.description : "",
-					tags: Array.isArray(post.tags) ? post.tags.filter((tag): tag is string => typeof tag === "string") : [],
-					category: typeof post.category === "string" ? post.category : "随笔",
-					cover: typeof post.cover === "string" ? post.cover : wallpaperOptions[0],
-					content: typeof post.content === "string" ? post.content : "",
-					views: typeof post.views === "number" ? post.views : 0,
-					comments: typeof post.comments === "number" ? post.comments : 0,
-				};
-			});
-			const importedSettings = raw.settings && typeof raw.settings === "object" ? raw.settings as Partial<Settings> : {};
-			const importedMedia = Array.isArray(raw.media) ? raw.media.filter((value): value is Media => {
-				if (!value || typeof value !== "object") return false;
-				const mediaItem = value as Partial<Media>;
-				return typeof mediaItem.name === "string" && typeof mediaItem.url === "string" && mediaItem.kind === "image";
-			}) : [];
-			posts = importedPosts;
-			settings = { ...defaultSettings, ...importedSettings };
-			media = importedMedia;
-			persist();
-			showToast(`已导入 ${posts.length} 篇文章，可继续发布`);
-		} catch (error) {
-			showToast(error instanceof Error ? error.message : "备份文件格式错误");
-		} finally {
-			input.value = "";
-		}
-	}
-
-	async function publishToGitHub() {
-		if (githubStatus === "loading" || githubStatus === "publishing") return;
-		if (githubStatus !== "connected") {
-			window.location.href = "/api/auth/github/start";
-			return;
-		}
-		githubStatus = "publishing";
-		try {
-			const response = await fetch("/api/publish", {
-				method: "POST",
-				headers: { "Content-Type": "application/json", Accept: "application/json" },
-				body: JSON.stringify({ backup: { posts, settings, media } }),
-			});
-			const result = (await response.json()) as { ok?: boolean; error?: string };
-			if (!response.ok || !result.ok) throw new Error(result.error || "发布失败");
-			githubStatus = "connected";
-			showToast("已提交 GitHub，正在自动部署");
-		} catch (error) {
-			githubStatus = "connected";
-			showToast(error instanceof Error ? error.message : "发布失败，请稍后重试");
-		}
-	}
-
-	async function logoutGitHub() {
-		await fetch("/api/auth/github/logout", { method: "POST" }).catch(() => undefined);
-		githubStatus = "disconnected";
-		githubLogin = "";
-		showToast("已退出 GitHub");
-	}
-
-	function clearLocalData() {
-		if (!window.confirm("确定要清除浏览器中的后台缓存吗？这不会删除源代码中的文章。")) return;
-		localStorage.removeItem("firefly-admin-posts");
-		localStorage.removeItem("firefly-admin-settings");
-		localStorage.removeItem("firefly-admin-media");
-		posts = initialPosts.map((post) => ({ ...post, status: post.status as Status }));
-		settings = { ...defaultSettings };
-		media = [];
-		showToast("本地缓存已清除");
-	}
+function clearLocalData() {
+	if (
+		!window.confirm(
+			"确定要清除浏览器中的后台缓存吗？这不会删除源代码中的文章。",
+		)
+	)
+		return;
+	localStorage.removeItem("firefly-admin-posts");
+	localStorage.removeItem("firefly-admin-settings");
+	localStorage.removeItem("firefly-admin-media");
+	posts = initialPosts.map((post) => ({
+		...post,
+		status: post.status as Status,
+	}));
+	settings = { ...defaultSettings };
+	media = [];
+	showToast("本地缓存已清除");
+}
 </script>
 
 <svelte:head>
