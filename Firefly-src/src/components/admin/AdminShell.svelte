@@ -504,7 +504,12 @@ async function publishToGitHub() {
 			body: JSON.stringify({ backup: { posts, settings, media } }),
 		});
 		const responseText = await response.text();
-		let result: { ok?: boolean; error?: string; reauthorize?: boolean };
+		let result: {
+			ok?: boolean;
+			error?: string;
+			stage?: string;
+			reauthorize?: boolean;
+		};
 		try {
 			result = JSON.parse(responseText) as {
 				ok?: boolean;
@@ -518,8 +523,11 @@ async function publishToGitHub() {
 			);
 		}
 		requiresReconnect = result.reauthorize === true;
-		if (!response.ok || !result.ok)
-			throw new Error(result.error || `发布失败（HTTP ${response.status}）`);
+		if (!response.ok || !result.ok) {
+			const stage = result.stage ? `（阶段：${result.stage}）` : "";
+			if (result.error) throw new Error(`${result.error}${stage}`);
+			throw new Error(`发布失败（HTTP ${response.status}）${stage}`);
+		}
 		githubStatus = "connected";
 		showToast("已提交 GitHub，正在自动部署");
 	} catch (error) {

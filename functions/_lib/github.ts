@@ -28,6 +28,7 @@ export class GitHubApiError extends Error {
 	readonly oauthScopes: string | null;
 	readonly acceptedOauthScopes: string | null;
 	readonly acceptedGithubPermissions: string | null;
+	readonly stage: string;
 	readonly githubMessage: string;
 	readonly userMessage: string;
 
@@ -37,6 +38,7 @@ export class GitHubApiError extends Error {
 		oauthScopes: string | null;
 		acceptedOauthScopes: string | null;
 		acceptedGithubPermissions: string | null;
+		stage: string;
 		githubMessage: string;
 	}) {
 		const githubMessage = redactToken(options.githubMessage);
@@ -47,6 +49,7 @@ export class GitHubApiError extends Error {
 		this.oauthScopes = options.oauthScopes;
 		this.acceptedOauthScopes = options.acceptedOauthScopes;
 		this.acceptedGithubPermissions = options.acceptedGithubPermissions;
+		this.stage = options.stage;
 		this.githubMessage = githubMessage;
 		this.userMessage = this.message;
 	}
@@ -56,7 +59,7 @@ function apiUrl(owner: string, repo: string, path: string): string {
 	return `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}${path}`;
 }
 
-async function githubFetch<T>(token: string, url: string, init: RequestInit = {}): Promise<T> {
+async function githubFetch<T>(token: string, url: string, init: RequestInit = {}, stage = "GitHub API"): Promise<T> {
 	const response = await fetch(url, {
 		...init,
 		headers: {
@@ -85,6 +88,7 @@ async function githubFetch<T>(token: string, url: string, init: RequestInit = {}
 			oauthScopes,
 			acceptedOauthScopes,
 			acceptedGithubPermissions,
+			stage,
 			githubMessage: message,
 		});
 	}
@@ -103,7 +107,7 @@ async function createBlob(token: string, owner: string, repo: string, file: Publ
 	const result = await githubFetch<{ sha?: string }>(token, apiUrl(owner, repo, "/git/blobs"), {
 		method: "POST",
 		body: JSON.stringify({ content, encoding: "base64" }),
-	});
+	}, "创建文件 Blob");
 	if (!result.sha) throw new Error(`GitHub did not return a blob SHA for ${file.path}`);
 	return result.sha;
 }
@@ -122,7 +126,7 @@ async function readPreviousManifest(
 	manifestPath: string,
 ): Promise<string[]> {
 	try {
-		const result = await githubFetch<GitHubContent>(token, apiUrl(owner, repo, `/contents/${manifestPath}?ref=${encodeURIComponent(branch)}`));
+		const result = await githubFetch<GitHubContent>(token, apiUrl(owner, repo, `/contents/${manifestPath}?ref=${encodeURIComponent(branch)}`), {}, "读取发布清单");
 		if (!result.content) return [];
 		const parsed = JSON.parse(base64ToUtf8(result.content)) as { paths?: unknown };
 		return Array.isArray(parsed.paths) ? parsed.paths.filter((path): path is string => typeof path === "string") : [];
@@ -141,10 +145,10 @@ export async function publishBundle(options: {
 	message: string;
 }): Promise<{ commitSha: string; commitUrl: string; files: number }> {
 	const { token, owner, repo, branch, bundle } = options;
-	const ref = await githubFetch<GitHubRef>(token, apiUrl(owner, repo, `/git/ref/heads/${encodeURIComponent(branch)}`));
+	const ref = await githubFetch<GitHubRef>(token, apiUrl(owner, repo, `/git/ref/heads/${encodeURIComponent(branch)}`), {}, "读取目标分支");
 	const parentSha = ref.object?.sha;
 	if (!parentSha) throw new Error("GitHub did not return the branch SHA");
-	const parentCommit = await githubFetch<GitHubCommit>(token, apiUrl(owner, repo, `/git/commits/${parentSha}`));
+	const parentCommit = await githubFetch<GitHubCommit>(token, apiUrl(owner, repo, `/git/commits/${parentSha}`), {}, "读取父提交");
 	const baseTreeSha = parentCommit.tree?.sha;
 	if (!baseTreeSha) throw new Error("GitHub did not return the base tree SHA");
 
@@ -161,17 +165,17 @@ export async function publishBundle(options: {
 	const newTree = await githubFetch<{ sha?: string }>(token, apiUrl(owner, repo, "/git/trees"), {
 		method: "POST",
 		body: JSON.stringify({ base_tree: baseTreeSha, tree }),
-	});
+	}, "创建 Git 树");
 	if (!newTree.sha) throw new Error("GitHub did not return the new tree SHA");
 	const commit = await githubFetch<{ sha?: string; html_url?: string }>(token, apiUrl(owner, repo, "/git/commits"), {
 		method: "POST",
 		body: JSON.stringify({ message: options.message, tree: newTree.sha, parents: [parentSha] }),
-	});
+	}, "创建 Git 提交");
 	if (!commit.sha) throw new Error("GitHub did not return the commit SHA");
 	await githubFetch(token, apiUrl(owner, repo, `/git/refs/heads/${encodeURIComponent(branch)}`), {
 		method: "PATCH",
 		body: JSON.stringify({ sha: commit.sha, force: false }),
-	});
+	}, "更新目标分支");
 	return {
 		commitSha: commit.sha,
 		commitUrl: commit.html_url || `https://github.com/${owner}/${repo}/commit/${commit.sha}`,
