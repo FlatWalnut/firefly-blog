@@ -158,9 +158,19 @@ export async function publishBundle(options: {
 	for (const path of previousPaths) {
 		if (!currentPaths.has(path)) tree.push({ path, mode: "100644", type: "blob", sha: null });
 	}
-	for (const file of bundle.files) {
-		tree.push({ path: file.path, mode: "100644", type: "blob", sha: await createBlob(token, owner, repo, file) });
-	}
+	// Creating every blob one at a time makes larger post collections exceed the
+	// Pages Function request window before the commit is assembled. Blob writes
+	// are independent, so create them concurrently and keep the later tree /
+	// commit steps atomic.
+	const fileBlobs = await Promise.all(
+		bundle.files.map(async (file) => ({
+			path: file.path,
+			mode: "100644" as const,
+			type: "blob" as const,
+			sha: await createBlob(token, owner, repo, file),
+		})),
+	);
+	tree.push(...fileBlobs);
 
 	const newTree = await githubFetch<{ sha?: string }>(token, apiUrl(owner, repo, "/git/trees"), {
 		method: "POST",
