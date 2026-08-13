@@ -9,7 +9,7 @@ export const siteConfig: SiteConfig = {
 	title: "流萤似火",
 
 	// 站点副标题
-	subtitle: "Demo site",
+	subtitle: "",
 
 	// 站点 URL
 	site_url: "https://xn--qzw410c.cc.cd",
