@@ -41,3 +41,6 @@ package/
 .codex*
 .claude
 .mimocode
+
+# except skills
+!.claude/skills/

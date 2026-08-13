@@ -82,3 +82,17 @@ LQIP data is generated into `src/constants/lqips.json` and committed — regener
 - **Cloudflare Workers** (`wrangler.jsonc`, set `CF_WORKERS` env var)
 - Static output to `dist/`
 
+## Skills
+
+### Image Grid Layout Skill
+
+Location: `.claude/skills/image-grid-layout/skill.md`
+
+Use this skill when:
+- Publishing image gallery posts
+- Adding multiple images in grid layout
+- User requests "图片画廊", "图片网格", "image grid", or "gallery"
+- Including images in blog posts with grid layout
+
+The skill provides guidance for using `[grid]` and `[/grid]` tags to create responsive image grids in blog posts.
+
