@@ -1,7 +1,7 @@
 ---
-title: 动漫截图分享
-published: 2025-01-06
-pinned: false
+title: 尤菲
+published: 2026-08-13
+pinned: true
 draft: false
 description: 一些喜欢的动漫截图
 tags: [动漫, 截图]
