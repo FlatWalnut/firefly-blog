@@ -11,38 +11,68 @@ This skill provides a complete guide for publishing blog posts and managing the 
 
 ## Publishing Workflow (Interactive)
 
-When user requests to publish a new post, **ask the following questions first**:
+**CRITICAL: When user requests to publish a new post, you MUST ask ALL the following questions BEFORE creating the post. Do NOT skip any question. Do NOT assume answers.**
 
-### Required Information
-1. **文章标题** - What is the post title?
-2. **文章内容** - What is the content or topic?
-3. **图片** - Do you have images to include? If yes, provide paths
+### Step 1: Ask Questions
 
-### Optional Features (Ask about each)
-4. **预览图 (Cover Image)**
-   - 使用文章第一张图作为预览图？(yes/no)
-   - 或指定特定图片路径？
-   - Note: Preview image shows in post list on homepage
+Present the following form to the user:
 
-5. **标签 (Tags)**
-   - What tags to add? (comma separated)
+```
+## 发布文章询问
 
-6. **分类 (Category)**
-   - Which category? (e.g., 文章示例, 博客指南, 图片, 教程)
+### 必填信息
+1. **文章标题** - 你想要什么标题？
+2. **文章内容** - 文章的主要内容是什么？
 
-7. **置顶 (Pinned)**
-   - Pin this post to top? (yes/no)
+### 图片相关
+3. **图片** - 是否有图片要包含？如果有，请提供路径
+4. **预览图** - 使用第几张图作为预览图？（默认第1张，或指定数字）
 
-8. **加密 (Password Protection)**
-   - Enable password protection? (yes/no)
-   - If yes, what password?
+### 可选功能（可跳过，使用默认值）
+5. **标签** - 需要添加哪些标签？（逗号分隔）
+6. **分类** - 文章分类是什么？（如：图片、教程、动漫）
+7. **置顶** - 是否置顶？（yes/no，默认no）
+8. **加密** - 是否需要密码保护？（yes/no，默认no）
+9. **评论** - 是否启用评论？（yes/no，默认yes）
+10. **草稿** - 保存为草稿还是直接发布？（draft/publish，默认publish）
+```
 
-9. **评论 (Comments)**
-   - Enable comments? (yes/no)
-   - Note: Requires comment system configured in `src/config/commentConfig.ts`
+### Step 2: Wait for User Response
 
-10. **草稿 (Draft)**
-    - Save as draft? (yes/no)
+**Do NOT proceed until user answers.** You may say "请回答以上问题" to prompt.
+
+### Step 3: Apply Defaults for Unanswered Questions
+
+| Field | Default |
+|-------|---------|
+| 预览图 | 第1张图 |
+| 标签 | [] (empty) |
+| 分类 | 文章示例 |
+| 置顶 | false |
+| 加密 | false |
+| 评论 | true |
+| 草稿 | false (直接发布) |
+
+### Step 4: Confirm Before Creating
+
+After gathering answers, show the user:
+```
+确认发布信息：
+- 标题: xxx
+- 预览图: 第x张
+- 标签: xxx
+- 分类: xxx
+- 置顶: yes/no
+- 加密: yes/no
+- 评论: yes/no
+- 草稿: yes/no
+
+确认创建？(yes/no)
+```
+
+### Step 5: Create Post
+
+Only after user confirms, proceed with creating the post.
 
 ## Post Frontmatter Template
 

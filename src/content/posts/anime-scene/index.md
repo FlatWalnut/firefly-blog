@@ -1,10 +1,11 @@
 ---
-title: 动漫场景
+title: 测试
 published: 2026-08-13
 pinned: false
 description: 一些精美的动漫场景截图
 tags: [动漫, 场景, 截图]
 category: 图片
+image: ./images/scene2.png
 ---
 
 ## 精美动漫场景
