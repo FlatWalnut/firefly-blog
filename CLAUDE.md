@@ -84,6 +84,18 @@ LQIP data is generated into `src/constants/lqips.json` and committed — regener
 
 ## Skills
 
+### Publish Post Skill
+
+Location: `.claude/skills/publish-post/skill.md`
+
+Use this skill when:
+- Publishing new blog posts
+- Managing content and configuration
+- Performing common blog operations
+- Need to understand project structure
+
+The skill provides complete workflow for creating posts, managing images, updating configuration, and pushing to GitHub.
+
 ### Image Grid Layout Skill
 
 Location: `.claude/skills/image-grid-layout/skill.md`
