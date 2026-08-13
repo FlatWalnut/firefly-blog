@@ -1,11 +1,11 @@
 ---
 title: 萝卜子
 published: 2026-08-13
-pinned: true
+pinned: false
 draft: false
 description: 萝卜子
 tags: [galgame]
-category: 文章示例
+category: 图片
 image: ./images/1.png
 password: ""
 comment: true
