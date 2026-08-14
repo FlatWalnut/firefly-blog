@@ -62,7 +62,6 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 		],
 	});
 
-
 	return { links } as NavBarConfig;
 };
 

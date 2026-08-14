@@ -1,6 +1,6 @@
+import { getCollection } from "astro:content";
 import fs from "node:fs";
 import path from "node:path";
-import { getCollection } from "astro:content";
 import type { GalleryAlbum } from "@/types/config";
 import { url } from "@/utils/url-utils";
 
@@ -93,9 +93,7 @@ export async function getPostImageAlbums(): Promise<
 			files.unshift(coverFile);
 		}
 
-		const photos = files.map((f) =>
-			withBase(`/gallery/post-${post.id}/${f}`),
-		);
+		const photos = files.map((f) => withBase(`/gallery/post-${post.id}/${f}`));
 
 		if (photos.length === 0) continue;
 
