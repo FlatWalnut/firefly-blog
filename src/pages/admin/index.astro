@@ -21,14 +21,31 @@ if (Astro.request.method === "POST" && !authed) {
 	const body = await Astro.request.formData();
 	const input = body.get("password");
 	if (input === AUTH_PASSWORD) {
-		Astro.cookies.set("admin_auth", AUTH_PASSWORD, { path: "/", maxAge: 86400 });
+		Astro.cookies.set("admin_auth", AUTH_PASSWORD, {
+			path: "/",
+			maxAge: 86400,
+		});
 		return Astro.redirect("/admin/");
 	}
 	return Astro.redirect("/admin/?err=1");
 }
 
-const desktopWallpapers = [desktop1.src, desktop2.src, desktop3.src, desktop4.src, desktop5.src, desktop6.src];
-const mobileWallpapers = [mobile1.src, mobile2.src, mobile3.src, mobile4.src, mobile5.src, mobile6.src];
+const desktopWallpapers = [
+	desktop1.src,
+	desktop2.src,
+	desktop3.src,
+	desktop4.src,
+	desktop5.src,
+	desktop6.src,
+];
+const mobileWallpapers = [
+	mobile1.src,
+	mobile2.src,
+	mobile3.src,
+	mobile4.src,
+	mobile5.src,
+	mobile6.src,
+];
 const posts = await getCollection("posts");
 const initialPosts = posts.map((post, index) => {
 	const fallbackCover = desktopWallpapers[index % desktopWallpapers.length];
@@ -39,11 +56,14 @@ const initialPosts = posts.map((post, index) => {
 		slug: post.id.replace(/\.(md|mdx)$/, "").replace(/\/index$/, ""),
 		status: post.data.draft ? ("draft" as const) : ("published" as const),
 		published: post.data.published.toISOString().slice(0, 10),
-		updated: (post.data.updated || post.data.published).toISOString().slice(0, 10),
+		updated: (post.data.updated || post.data.published)
+			.toISOString()
+			.slice(0, 10),
 		description: post.data.description || "还没有添加文章摘要。",
 		tags: post.data.tags || [],
 		category: post.data.category || "未分类",
-		cover: image.startsWith("http") || image.startsWith("/") ? image : fallbackCover,
+		cover:
+			image.startsWith("http") || image.startsWith("/") ? image : fallbackCover,
 		content: post.body || "",
 		views: 120 + index * 87,
 		comments: index % 4,
