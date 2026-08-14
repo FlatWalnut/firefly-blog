@@ -14,22 +14,6 @@ import mobile5 from "@assets/images/MobileWallpaper/m5.avif";
 import mobile6 from "@assets/images/MobileWallpaper/m6.avif";
 import AdminShell from "@components/admin/AdminShell.svelte";
 
-const AUTH_PASSWORD = "wuJIA1130";
-const authed = Astro.cookies.get("admin_auth")?.value === AUTH_PASSWORD;
-
-if (Astro.request.method === "POST" && !authed) {
-	const body = await Astro.request.formData();
-	const input = body.get("password");
-	if (input === AUTH_PASSWORD) {
-		Astro.cookies.set("admin_auth", AUTH_PASSWORD, {
-			path: "/",
-			maxAge: 86400,
-		});
-		return Astro.redirect("/admin/");
-	}
-	return Astro.redirect("/admin/?err=1");
-}
-
 const desktopWallpapers = [
 	desktop1.src,
 	desktop2.src,
@@ -77,32 +61,59 @@ const initialPosts = posts.map((post, index) => {
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="robots" content="noindex, nofollow" />
-		<title>管理后台 · {authed ? "Firefly" : "登录"}</title>
-		{!authed && (
-			<style>
-				body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #0a0a0a; font-family: system-ui, sans-serif; }
-				.box { background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 12px; padding: 2.5rem; width: 320px; text-align: center; }
-				h2 { color: #e0e0e0; margin: 0 0 1.5rem; font-size: 1.3rem; }
-				input { width: 100%; box-sizing: border-box; padding: 0.7rem 1rem; border: 1px solid #3a3a5e; border-radius: 8px; background: #12122a; color: #e0e0e0; font-size: 0.95rem; outline: none; }
-				input:focus { border-color: #6ee7b7; }
-				button { width: 100%; margin-top: 1rem; padding: 0.7rem; border: none; border-radius: 8px; background: #6ee7b7; color: #0a0a0a; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
-				button:hover { background: #34d399; }
-				.err { color: #f87171; font-size: 0.85rem; margin-top: 0.8rem; }
-			</style>
-		)}
+		<title>管理后台 · Firefly</title>
+		<style>
+			.login-mask {
+				position: fixed; inset: 0; z-index: 9999;
+				display: flex; align-items: center; justify-content: center;
+				background: #0a0a0a; font-family: system-ui, sans-serif;
+			}
+			.login-mask.hidden { display: none; }
+			.box { background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 12px; padding: 2.5rem; width: 320px; text-align: center; }
+			h2 { color: #e0e0e0; margin: 0 0 1.5rem; font-size: 1.3rem; }
+			input { width: 100%; box-sizing: border-box; padding: 0.7rem 1rem; border: 1px solid #3a3a5e; border-radius: 8px; background: #12122a; color: #e0e0e0; font-size: 0.95rem; outline: none; }
+			input:focus { border-color: #6ee7b7; }
+			button { width: 100%; margin-top: 1rem; padding: 0.7rem; border: none; border-radius: 8px; background: #6ee7b7; color: #0a0a0a; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
+			button:hover { background: #34d399; }
+			.err { color: #f87171; font-size: 0.85rem; margin-top: 0.8rem; }
+		</style>
 	</head>
 	<body>
-		{authed ? (
-			<AdminShell client:load initialPosts={initialPosts} desktopWallpapers={desktopWallpapers} mobileWallpapers={mobileWallpapers} />
-		) : (
+		<div class="login-mask" id="loginMask">
 			<div class="box">
 				<h2>管理后台</h2>
-				<form method="POST">
-					<input type="password" name="password" placeholder="请输入密码" autofocus />
-					<button type="submit">登录</button>
-				</form>
-				{Astro.url.searchParams.get("err") && <p class="err">密码错误，请重试</p>}
+				<input type="password" id="pwdInput" placeholder="请输入密码" autofocus />
+				<button id="loginBtn">登录</button>
+				<p class="err" id="errMsg" style="display:none">密码错误，请重试</p>
 			</div>
-		)}
+		</div>
+		<AdminShell client:load initialPosts={initialPosts} desktopWallpapers={desktopWallpapers} mobileWallpapers={mobileWallpapers} />
+		<script is:inline>
+			(function () {
+				const KEY = "admin_auth";
+				const HASH = "wuJIA1130";
+				const mask = document.getElementById("loginMask");
+				const input = document.getElementById("pwdInput");
+				const btn = document.getElementById("loginBtn");
+				const err = document.getElementById("errMsg");
+
+				if (sessionStorage.getItem(KEY) === HASH) {
+					mask.classList.add("hidden");
+					return;
+				}
+
+				btn.addEventListener("click", function () {
+					if (input.value === HASH) {
+						sessionStorage.setItem(KEY, HASH);
+						mask.classList.add("hidden");
+					} else {
+						err.style.display = "";
+					}
+				});
+				input.addEventListener("keydown", function (e) {
+					if (e.key === "Enter") btn.click();
+				});
+			})();
+		</script>
 	</body>
 </html>

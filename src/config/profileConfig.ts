@@ -40,9 +40,9 @@ export const profileConfig: ProfileConfig = {
 			showName: false,
 		},
 		{
-			name: "X",
-			icon: "fa7-brands:x-twitter",
-			url: "https://x.com/wu687142755",
+			name: "Bilibili",
+			icon: "fa7-brands:bilibili",
+			url: "https://space.bilibili.com/506029737?spm_id_from=333.1387.0.0",
 			showName: false,
 		},
 		{
