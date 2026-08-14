@@ -15,11 +15,8 @@ import mobile6 from "@assets/images/MobileWallpaper/m6.avif";
 import AdminShell from "@components/admin/AdminShell.svelte";
 
 const AUTH_PASSWORD = "wuJIA1130";
-
-// 服务端验证：检查 cookie
 const authed = Astro.cookies.get("admin_auth")?.value === AUTH_PASSWORD;
 
-// 处理 GET 参数登录（绕过 405）
 const url = new URL(Astro.request.url);
 const pwdParam = url.searchParams.get("pwd");
 if (pwdParam === AUTH_PASSWORD && !authed) {
@@ -29,8 +26,6 @@ if (pwdParam === AUTH_PASSWORD && !authed) {
 	});
 	return Astro.redirect("/admin/");
 }
-
-// 登出
 if (url.searchParams.get("logout") === "1") {
 	Astro.cookies.delete("admin_auth", { path: "/" });
 	return Astro.redirect("/admin/");
@@ -52,64 +47,74 @@ const mobileWallpapers = [
 	mobile5.src,
 	mobile6.src,
 ];
-const posts = await getCollection("posts");
-const initialPosts = posts.map((post, index) => {
-	const fallbackCover = desktopWallpapers[index % desktopWallpapers.length];
-	const image = post.data.image || "";
-	return {
-		id: post.id,
-		title: post.data.title,
-		slug: post.id.replace(/\.(md|mdx)$/, "").replace(/\/index$/, ""),
-		status: post.data.draft ? ("draft" as const) : ("published" as const),
-		published: post.data.published.toISOString().slice(0, 10),
-		updated: (post.data.updated || post.data.published)
-			.toISOString()
-			.slice(0, 10),
-		description: post.data.description || "还没有添加文章摘要。",
-		tags: post.data.tags || [],
-		category: post.data.category || "未分类",
-		cover:
-			image.startsWith("http") || image.startsWith("/") ? image : fallbackCover,
-		content: post.body || "",
-		views: 120 + index * 87,
-		comments: index % 4,
-	};
-});
+
+let initialPosts: {
+	id: string;
+	title: string;
+	slug: string;
+	status: "draft" | "published";
+	published: string;
+	updated: string;
+	description: string;
+	tags: string[];
+	category: string;
+	cover: string;
+	content: string;
+	views: number;
+	comments: number;
+}[] = [];
+
+if (authed) {
+	const posts = await getCollection("posts");
+	initialPosts = posts.map((post, index) => {
+		const fallbackCover = desktopWallpapers[index % desktopWallpapers.length];
+		const image = post.data.image || "";
+		return {
+			id: post.id,
+			title: post.data.title,
+			slug: post.id.replace(/\.(md|mdx)$/, "").replace(/\/index$/, ""),
+			status: post.data.draft ? ("draft" as const) : ("published" as const),
+			published: post.data.published.toISOString().slice(0, 10),
+			updated: (post.data.updated || post.data.published)
+				.toISOString()
+				.slice(0, 10),
+			description: post.data.description || "",
+			tags: post.data.tags || [],
+			category: post.data.category || "未分类",
+			cover:
+				image.startsWith("http") || image.startsWith("/")
+					? image
+					: fallbackCover,
+			content: post.body || "",
+			views: 120 + index * 87,
+			comments: index % 4,
+		};
+	});
+}
 ---
 
-{authed ? (
-	<!doctype html>
-	<html lang="zh-CN">
-		<head>
-			<meta charset="UTF-8" />
-			<meta name="viewport" content="width=device-width, initial-scale=1" />
-			<meta name="robots" content="noindex, nofollow" />
-			<title>管理后台 · Firefly</title>
-		</head>
-		<body>
-			<AdminShell client:load initialPosts={initialPosts} desktopWallpapers={desktopWallpapers} mobileWallpapers={mobileWallpapers} />
-		</body>
-	</html>
-) : (
-	<!doctype html>
-	<html lang="zh-CN">
-		<head>
-			<meta charset="UTF-8" />
-			<meta name="viewport" content="width=device-width, initial-scale=1" />
-			<meta name="robots" content="noindex, nofollow" />
-			<title>管理后台 · 登录</title>
-			<style>
-				body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #0a0a0a; font-family: system-ui, sans-serif; }
-				.box { background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 12px; padding: 2.5rem; width: 320px; text-align: center; }
-				h2 { color: #e0e0e0; margin: 0 0 1.5rem; font-size: 1.3rem; }
-				input { width: 100%; box-sizing: border-box; padding: 0.7rem 1rem; border: 1px solid #3a3a5e; border-radius: 8px; background: #12122a; color: #e0e0e0; font-size: 0.95rem; outline: none; }
-				input:focus { border-color: #6ee7b7; }
-				button { width: 100%; margin-top: 1rem; padding: 0.7rem; border: none; border-radius: 8px; background: #6ee7b7; color: #0a0a0a; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
-				button:hover { background: #34d399; }
-				.err { color: #f87171; font-size: 0.85rem; margin-top: 0.8rem; }
-			</style>
-		</head>
-		<body>
+<!doctype html>
+<html lang="zh-CN">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="robots" content="noindex, nofollow" />
+		<title>管理后台 · {authed ? "Firefly" : "登录"}</title>
+		<style>
+			body { margin: 0; min-height: 100vh; font-family: system-ui, sans-serif; }
+			.login-mask { position: fixed; inset: 0; z-index: 9999; display: flex; align-items: center; justify-content: center; background: #0a0a0a; }
+			.login-mask.hidden { display: none; }
+			.box { background: #1a1a2e; border: 1px solid #2a2a3e; border-radius: 12px; padding: 2.5rem; width: 320px; text-align: center; }
+			h2 { color: #e0e0e0; margin: 0 0 1.5rem; font-size: 1.3rem; }
+			input { width: 100%; box-sizing: border-box; padding: 0.7rem 1rem; border: 1px solid #3a3a5e; border-radius: 8px; background: #12122a; color: #e0e0e0; font-size: 0.95rem; outline: none; }
+			input:focus { border-color: #6ee7b7; }
+			button { width: 100%; margin-top: 1rem; padding: 0.7rem; border: none; border-radius: 8px; background: #6ee7b7; color: #0a0a0a; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
+			button:hover { background: #34d399; }
+			.err { color: #f87171; font-size: 0.85rem; margin-top: 0.8rem; }
+		</style>
+	</head>
+	<body>
+		<div class:list={["login-mask", { hidden: authed }]}>
 			<div class="box">
 				<h2>管理后台</h2>
 				<form method="GET" action="/admin/">
@@ -118,6 +123,9 @@ const initialPosts = posts.map((post, index) => {
 				</form>
 				{url.searchParams.get("err") && <p class="err">密码错误，请重试</p>}
 			</div>
-		</body>
-	</html>
-)}
+		</div>
+		{authed && (
+			<AdminShell client:load initialPosts={initialPosts} desktopWallpapers={desktopWallpapers} mobileWallpapers={mobileWallpapers} />
+		)}
+	</body>
+</html>
