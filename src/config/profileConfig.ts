@@ -34,6 +34,18 @@ export const profileConfig: ProfileConfig = {
 			showName: false,
 		},
 		{
+			name: "抖音",
+			icon: "fa7-brands:tiktok",
+			url: "https://www.douyin.com/user/self?from_tab_name=main",
+			showName: false,
+		},
+		{
+			name: "X",
+			icon: "fa7-brands:x-twitter",
+			url: "https://x.com/wu687142755",
+			showName: false,
+		},
+		{
 			name: "RSS",
 			icon: "fa7-solid:rss",
 			url: "/rss/",

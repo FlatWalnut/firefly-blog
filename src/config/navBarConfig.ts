@@ -36,31 +36,14 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 	// 友链
 	links.push(LinkPresets.Friends);
 
-	// 留言
-	links.push(LinkPresets.Guestbook);
+	// 动态
+	links.push(LinkPresets.Dynamic);
 
-	// 我的及其子菜单
-	links.push({
-		name: "我的",
-		url: "#",
-		icon: "material-symbols:person",
-		children: [
-			// 动态
-			LinkPresets.Dynamic,
+	// 相册
+	links.push(LinkPresets.Gallery);
 
-			// 相册
-			LinkPresets.Gallery,
-
-			// 追番
-			LinkPresets.Anime,
-
-			// 番组计划
-			LinkPresets.Bangumi,
-
-			// 书签导航
-			LinkPresets.Booknav,
-		],
-	});
+	// 追番
+	links.push(LinkPresets.Anime);
 
 	return { links } as NavBarConfig;
 };
