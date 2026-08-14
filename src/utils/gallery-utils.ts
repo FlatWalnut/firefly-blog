@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { getCollection } from "astro:content";
 import type { GalleryAlbum } from "@/types/config";
 import { url } from "@/utils/url-utils";
 
@@ -58,4 +59,58 @@ export function getAlbumCover(album: GalleryAlbum, photos: string[]): string {
 	if (album.cover) return withBase(album.cover);
 	const coverFile = photos.find((p) => /\/cover\./i.test(p));
 	return coverFile || photos[0] || "";
+}
+
+/**
+ * 扫描所有博客文章的图片目录，为每篇有图片的文章生成一个虚拟相册
+ */
+export async function getPostImageAlbums(): Promise<
+	(GalleryAlbum & { photos: string[] })[]
+> {
+	const posts = await getCollection("posts", ({ data }) => {
+		return import.meta.env.PROD ? data.draft !== true : true;
+	});
+
+	const albums: (GalleryAlbum & { photos: string[] })[] = [];
+
+	for (const post of posts) {
+		const imagesDir = path.join(
+			process.cwd(),
+			"public",
+			"gallery",
+			`post-${post.id}`,
+		);
+		if (!fs.existsSync(imagesDir)) continue;
+
+		const files = fs
+			.readdirSync(imagesDir)
+			.filter((f) => /\.(jpe?g|png|webp|avif|gif)$/i.test(f))
+			.sort();
+
+		const coverIdx = files.findIndex((f) => /^cover\./i.test(f));
+		if (coverIdx > 0) {
+			const [coverFile] = files.splice(coverIdx, 1);
+			files.unshift(coverFile);
+		}
+
+		const photos = files.map((f) =>
+			withBase(`/gallery/post-${post.id}/${f}`),
+		);
+
+		if (photos.length === 0) continue;
+
+		albums.push({
+			id: `post-${post.id}`,
+			name: post.data.title,
+			description: post.data.description || "",
+			date: post.data.published
+				? new Date(post.data.published).toISOString().split("T")[0]
+				: undefined,
+			tags: post.data.tags || [],
+			cover: photos[0],
+			photos,
+		});
+	}
+
+	return albums;
 }

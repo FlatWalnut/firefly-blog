@@ -5,7 +5,11 @@ import { galleryConfig, siteConfig } from "@/config";
 import I18nKey from "@/i18n/i18nKey";
 import { i18n } from "@/i18n/translation";
 import MainGridLayout from "@/layouts/MainGridLayout.astro";
-import { getAlbumCover, scanAlbumPhotos } from "@/utils/gallery-utils";
+import {
+	getAlbumCover,
+	getPostImageAlbums,
+	scanAlbumPhotos,
+} from "@/utils/gallery-utils";
 
 // 检查页面是否启用
 if (!siteConfig.pages.gallery) {
@@ -15,12 +19,23 @@ if (!siteConfig.pages.gallery) {
 const title = i18n(I18nKey.gallery);
 const description = i18n(I18nKey.galleryDescription);
 
-// 构建相册数据（扫描照片、获取封面）
-const albums = galleryConfig.albums.map((album) => {
+// 构建配置相册数据（扫描照片、获取封面）
+const configAlbums = galleryConfig.albums.map((album) => {
 	const photos = scanAlbumPhotos(album.id);
 	const cover = getAlbumCover(album, photos);
 	return { ...album, cover, photoCount: photos.length };
 });
+
+// 获取博客文章图片相册
+const postAlbums = await getPostImageAlbums();
+const postAlbumData = postAlbums.map((album) => ({
+	...album,
+	cover: album.cover || "",
+	photoCount: album.photos.length,
+}));
+
+// 合并所有相册
+const albums = [...configAlbums, ...postAlbumData];
 
 // 收集所有标签用于筛选
 const allTags = [...new Set(albums.flatMap((a) => a.tags || []))].sort();

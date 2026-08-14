@@ -3,10 +3,10 @@
   "type": "module",
   "version": "6.15.6",
   "scripts": {
-    "dev": "astro dev",
+    "dev": "npx tsx scripts/sync-post-images.ts && astro dev",
     "start": "astro dev",
     "check": "astro check",
-    "build": "npx tsx scripts/generate-lqips.ts && astro build && npx tsx scripts/subset-fonts.ts && pagefind --site dist",
+    "build": "npx tsx scripts/sync-post-images.ts && npx tsx scripts/generate-lqips.ts && astro build && npx tsx scripts/subset-fonts.ts && pagefind --site dist",
     "preview": "astro preview",
     "astro": "astro",
     "type-check": "tsc --noEmit --isolatedDeclarations",

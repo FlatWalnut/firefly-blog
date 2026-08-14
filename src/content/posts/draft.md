@@ -2,7 +2,7 @@
 title: 草稿示例
 published: 2026-08-13
 tags: [Markdown, 博客, 演示]
-category: 文章示例
+category: 博客指南
 draft: true
 slug: draft
 ---
