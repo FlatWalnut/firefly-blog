@@ -5,6 +5,7 @@ pinned: false
 description: 一些可爱的瞬间
 tags: [可爱, 动漫, 图片]
 category: 图片
+image: ./images/cute2.png
 ---
 
 ## 可爱的瞬间
