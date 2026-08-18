@@ -6,8 +6,12 @@ type GitHubRef = { object?: { sha?: string } };
 type GitHubCommit = { tree?: { sha?: string } };
 type GitHubContent = { content?: string; encoding?: string };
 type GitHubError = { message?: string };
+type GitHubTreeItem =
+	| { path: string; mode: "100644"; type: "blob"; content: string }
+	| { path: string; mode: "100644"; type: "blob"; sha: null };
 
 const INTEGRATION_ACCESS_ERROR = "resource not accessible by integration";
+const TRANSIENT_STATUSES = new Set([429, 502, 503, 504]);
 
 function redactToken(value: string): string {
 	return value.replace(/(Bearer\s+|access_token[=:]\s*)[^\s,;]+/gi, "$1[redacted]");
@@ -59,7 +63,55 @@ function apiUrl(owner: string, repo: string, path: string): string {
 	return `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}${path}`;
 }
 
+function retryDelay(attempt: number): number {
+	return 500 * 2 ** attempt;
+}
+
 async function githubFetch<T>(token: string, url: string, init: RequestInit = {}, stage = "GitHub API"): Promise<T> {
+	const maxAttempts = init.method && init.method !== "GET" ? 3 : 2;
+	let lastError: GitHubApiError | undefined;
+	for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+		const response = await fetch(url, {
+			...init,
+			headers: {
+				Accept: "application/vnd.github+json",
+				Authorization: `Bearer ${token}`,
+				"X-GitHub-Api-Version": API_VERSION,
+				"User-Agent": "Firefly-blog-publisher",
+				"Content-Type": "application/json",
+				...(init.headers || {}),
+			},
+		});
+		if (response.ok) return (await response.json()) as T;
+
+		let message = `GitHub API returned ${response.status}`;
+		const oauthScopes = response.headers.get("X-OAuth-Scopes");
+		const acceptedOauthScopes = response.headers.get("X-Accepted-OAuth-Scopes");
+		const acceptedGithubPermissions = response.headers.get("X-Accepted-GitHub-Permissions");
+		try {
+			const error = (await response.json()) as GitHubError;
+			if (error.message) message = error.message;
+		} catch {
+			// Keep the generic status when GitHub does not return JSON.
+		}
+		lastError = new GitHubApiError({
+			status: response.status,
+			endpoint: url,
+			oauthScopes,
+			acceptedOauthScopes,
+			acceptedGithubPermissions,
+			stage,
+			githubMessage: message,
+		});
+		if (!TRANSIENT_STATUSES.has(response.status) || attempt === maxAttempts - 1) {
+			throw lastError;
+		}
+		await new Promise((resolve) => setTimeout(resolve, retryDelay(attempt)));
+	}
+	throw lastError;
+}
+
+async function githubFetchOld<T>(token: string, url: string, init: RequestInit = {}, stage = "GitHub API"): Promise<T> {
 	const response = await fetch(url, {
 		...init,
 		headers: {

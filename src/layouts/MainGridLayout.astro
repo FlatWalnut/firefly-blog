@@ -7,6 +7,7 @@ import Navbar from "@components/layout/Navbar.astro";
 import SideBar from "@components/layout/SideBar.astro";
 import type { MarkdownHeading } from "astro";
 import { Icon } from "astro-icon/components";
+import blogTitleImage from "@/assets/images/logo/blog-title.png";
 import ImageWrapper from "@/components/common/ImageWrapper.astro";
 import FloatingControls from "@/components/controls/FloatingControls.astro";
 import ScrollDownIndicator from "@/components/controls/ScrollDownIndicator.astro";
@@ -624,8 +625,15 @@ const hasMultipleImages =
             <div class="w-4/5 lg:w-3/4 text-center mb-0">
                 <div class="flex flex-col">
                     {backgroundWallpaper.common?.homeText?.title && (
-                        <div class="banner-title font-bold text-white mb-2 lg:mb-4 leading-tight" style={{ '--banner-title-size': backgroundWallpaper.common.homeText.titleSize || "3rem" }}>
-                            {backgroundWallpaper.common.homeText.title}
+                        <div class="banner-title mb-2 lg:mb-4 leading-tight">
+                            <img
+                                src={blogTitleImage.src}
+                                alt={backgroundWallpaper.common.homeText.title}
+                                class="banner-title-image mx-auto"
+                                style="width: min(60vw, 560px); height: auto;"
+                                loading="eager"
+                                fetchpriority="high"
+                            />
                         </div>
                     )}
                     {backgroundWallpaper.common?.homeText?.subtitle && (

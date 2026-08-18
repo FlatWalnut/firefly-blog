@@ -2,7 +2,7 @@ import type { BackgroundWallpaperConfig } from "@/types/backgroundWallpaper";
 
 export const backgroundWallpaper: BackgroundWallpaperConfig = {
 	// 壁纸模式："banner" 横幅壁纸，"fullscreen" 全屏壁纸，"overlay" 全屏透明，"none" 纯色背景无壁纸
-	mode: "banner",
+	mode: "fullscreen",
 	// 是否启用背景视频播放，配置后将在导航栏显示视频播放按钮
 	playerEnable: true,
 	/**
@@ -76,27 +76,15 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 			title: "流萤似火",
 			// 主页横幅主标题字体大小
 			titleSize: "4.5rem",
-			// 主页横幅副标题
-			subtitle: [
-				"愿以萤火之光，点亮漫漫长夜",
-				"星河璀璨，不及你眼中光芒",
-				"愿做那夜空中最亮的星",
-				"以梦为马，不负韶华",
-				"愿你眼中有星辰大海",
-				"生活明朗，万物可爱",
-			],
+			// 主页横幅副标题（留空则不显示）
+			subtitle: "",
 			// 主页横幅副标题字体大小
 			subtitleSize: "1.5rem",
 			typewriter: {
 				// 是否启用打字机效果
-				// 打字机开启 → 循环显示所有副标题
-				// 打字机关闭 → 每次刷新随机显示一条副标题
-				enable: true,
-				// 打字速度（毫秒）
+				enable: false,
 				speed: 100,
-				// 删除速度（毫秒）
 				deleteSpeed: 50,
-				// 完全显示后的暂停时间（毫秒）
 				pauseTime: 2000,
 			},
 		},
@@ -135,9 +123,9 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 		// 壁纸轮播配置，横幅壁纸和全屏壁纸共享，仅在配置多张图片时生效
 		carousel: {
 			// 是否启用壁纸轮播；关闭时保持每次刷新随机显示一张
-			enable: false,
+			enable: true,
 			// 轮播切换间隔（毫秒）
-			interval: 5000,
+			interval: 10000,
 			// 过渡效果: 'fade' 渐变 | 'zoom' 缩放 | 'slide' 滑动 | 'kenburns' 旋转木马
 			transitionEffect: "zoom",
 		},

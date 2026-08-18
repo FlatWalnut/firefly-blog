@@ -33,6 +33,9 @@ yarn.lock
 # docs
 Firefly-docs/
 
+# git internal directory
+Firefly-src-git/
+
 cache/
 package/
 .obsidian/

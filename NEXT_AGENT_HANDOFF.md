@@ -691,3 +691,74 @@ https://流萤.cc.cd/api/logout              注销
 
 - GitHub App 权限选择：https://docs.github.com/en/apps/creating-github-apps/registering-a-github-app/choosing-permissions-for-a-github-app
 - GitHub App REST 权限：https://docs.github.com/en/rest/authentication/permissions-required-for-github-apps
+
+## 十四、2026-08-14 会话变更总结
+
+### 本次会话完成的改动（已推送到 main）
+
+#### 导航栏重构（`src/config/navBarConfig.ts`）
+- 删除"链接"菜单（GitHub/Gitee/QQ群/文档）
+- 删除"关于"菜单（打赏/关于我）
+- 删除"留言"导航项
+- "友链"、"动态"、"相册"、"追番"改为独立导航项
+- 删除番组计划和书签导航
+
+#### 侧边栏社交链接（`src/config/profileConfig.ts`）
+- 邮箱改为 `hutao1314ii@gmail.com`
+- 删除 QQ 链接
+- 新增抖音链接：`https://www.douyin.com/user/self?from_tab_name=main`
+- 新增 Bilibili 链接：`https://space.bilibili.com/506029737`
+- 保留 GitHub、Email、RSS
+
+#### 页面开关（`src/config/siteConfig.ts`）
+- `bangumi: false`（番组计划关闭）
+- `booknav: false`（书签导航关闭）
+- 追番 Bilibili UID 改为 `506029737`
+
+#### 关于我页面（`src/content/spec/about.md`）
+- 内容改为个人信息间隔模式，包含技术栈、学校网站、音乐链接、游戏ID、社交链接
+
+#### 文章分类
+- 6 篇文章的 `category` 从"文章示例"改为"博客指南"
+
+#### 相册自动同步
+- `src/utils/gallery-utils.ts` 新增 `getPostImageAlbums()` 扫描文章图片
+- `src/pages/gallery/index.astro` 和 `[album].astro` 合并文章图片相册
+- `scripts/sync-post-images.ts` 用 symlink 链接 `src/content/posts/*/images/` → `public/gallery/post-{slug}/`
+- `package.json` build/dev 脚本包含 sync 步骤
+
+#### Admin 页面（`src/pages/admin/index.astro`）
+- 添加密码登录页（密码：`wuJIA1130`）
+- **当前不可用**：静态模式下服务端逻辑不执行
+- 详见 `后台.md`
+
+### 待解决问题
+
+#### 1. Admin 后台登录不可用（优先级高）
+- **问题**：`output: "static"` 导致 `.astro` 页面的服务端逻辑（cookie、redirect）不执行
+- **方案**：将 `astro.config.mjs` 的 `output` 改为 `"server"` 或 `"hybrid"`
+- **详情**：见 `后台.md`
+
+#### 2. 评论系统未启用
+- `commentConfig.ts` 中 `type: "none"`
+- 留言页面已开启但因无评论系统无法使用
+- 需要部署 Twikoo/Giscus/Waline 等评论服务
+
+#### 3. GitHub 发布 502 问题（历史遗留）
+- 见第十三节，尚未完全解决
+
+### 关键配置文件速查
+
+| 文件 | 用途 |
+|---|---|
+| `src/config/siteConfig.ts` | 站点设置、页面开关、追番 UID |
+| `src/config/navBarConfig.ts` | 导航栏结构 |
+| `src/config/profileConfig.ts` | 头像、社交链接 |
+| `src/config/commentConfig.ts` | 评论系统配置 |
+| `src/config/galleryConfig.ts` | 相册配置 |
+| `astro.config.mjs` | Astro 输出模式（**需改为 SSR**） |
+
+### CI 注意事项
+
+- GitHub Actions 运行 Biome lint，格式问题会导致 CI 失败
+- 提交前运行 `pnpm lint` 自动修复格式
