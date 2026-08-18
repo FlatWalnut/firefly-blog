@@ -20,6 +20,9 @@
  *
  * 本地字体子集化：在 fontConfig.subsetFonts 中添加对应 cssVariable 的配置，
  * 构建时脚本会自动扫描页面字符并生成轻量 woff2 子集。
+ *
+ * 注意：为避免 CI/构建环境无法访问外网导致字体下载失败，Inter、Zen Maru Gothic、
+ * JetBrains Mono 均使用本地字体文件（src/assets/fonts/），无需在构建时联网获取。
  */
 import type { FontDefinition, FontSelectionConfig } from "@/types/fontConfig";
 
@@ -30,28 +33,151 @@ export const fontsList: FontDefinition[] = [
 	{
 		name: "Zen Maru Gothic",
 		cssVariable: "--font-zen-maru-gothic",
-		provider: "fontsource",
-		weights: ["300", "400", "500", "600", "700"],
-		styles: ["normal"],
-		subsets: ["latin", "cyrillic"],
+		provider: "local",
+		options: {
+			variants: [
+				{
+					src: ["./src/assets/fonts/zen-maru-gothic-latin-300-normal.woff2"],
+					weight: "300",
+					style: "normal",
+				},
+				{
+					src: ["./src/assets/fonts/zen-maru-gothic-latin-400-normal.woff2"],
+					weight: "400",
+					style: "normal",
+				},
+				{
+					src: ["./src/assets/fonts/zen-maru-gothic-latin-500-normal.woff2"],
+					weight: "500",
+					style: "normal",
+				},
+				{
+					src: ["./src/assets/fonts/zen-maru-gothic-latin-700-normal.woff2"],
+					weight: "700",
+					style: "normal",
+				},
+				{
+					src: ["./src/assets/fonts/zen-maru-gothic-latin-900-normal.woff2"],
+					weight: "900",
+					style: "normal",
+				},
+				{
+					src: ["./src/assets/fonts/zen-maru-gothic-cyrillic-300-normal.woff2"],
+					weight: "300",
+					style: "normal",
+				},
+				{
+					src: ["./src/assets/fonts/zen-maru-gothic-cyrillic-400-normal.woff2"],
+					weight: "400",
+					style: "normal",
+				},
+				{
+					src: ["./src/assets/fonts/zen-maru-gothic-cyrillic-500-normal.woff2"],
+					weight: "500",
+					style: "normal",
+				},
+				{
+					src: ["./src/assets/fonts/zen-maru-gothic-cyrillic-700-normal.woff2"],
+					weight: "700",
+					style: "normal",
+				},
+				{
+					src: ["./src/assets/fonts/zen-maru-gothic-cyrillic-900-normal.woff2"],
+					weight: "900",
+					style: "normal",
+				},
+			],
+		},
 		fallbacks: ["sans-serif"],
 	},
 	{
 		name: "Inter",
 		cssVariable: "--font-inter",
-		provider: "fontsource",
-		weights: ["300", "400", "500", "600", "700"],
-		styles: ["normal"],
-		subsets: ["latin", "cyrillic"],
+		provider: "local",
+		options: {
+			variants: [
+				{
+					src: ["./src/assets/fonts/inter-latin-300-normal.woff2"],
+					weight: "300",
+					style: "normal",
+				},
+				{
+					src: ["./src/assets/fonts/inter-latin-400-normal.woff2"],
+					weight: "400",
+					style: "normal",
+				},
+				{
+					src: ["./src/assets/fonts/inter-latin-500-normal.woff2"],
+					weight: "500",
+					style: "normal",
+				},
+				{
+					src: ["./src/assets/fonts/inter-latin-600-normal.woff2"],
+					weight: "600",
+					style: "normal",
+				},
+				{
+					src: ["./src/assets/fonts/inter-latin-700-normal.woff2"],
+					weight: "700",
+					style: "normal",
+				},
+				{
+					src: ["./src/assets/fonts/inter-cyrillic-300-normal.woff2"],
+					weight: "300",
+					style: "normal",
+				},
+				{
+					src: ["./src/assets/fonts/inter-cyrillic-400-normal.woff2"],
+					weight: "400",
+					style: "normal",
+				},
+				{
+					src: ["./src/assets/fonts/inter-cyrillic-500-normal.woff2"],
+					weight: "500",
+					style: "normal",
+				},
+				{
+					src: ["./src/assets/fonts/inter-cyrillic-600-normal.woff2"],
+					weight: "600",
+					style: "normal",
+				},
+				{
+					src: ["./src/assets/fonts/inter-cyrillic-700-normal.woff2"],
+					weight: "700",
+					style: "normal",
+				},
+			],
+		},
 		fallbacks: ["sans-serif"],
 	},
 	{
 		name: "JetBrains Mono",
 		cssVariable: "--font-jetbrains-mono",
-		provider: "fontsource",
-		weights: ["400", "700"],
-		styles: ["normal"],
-		subsets: ["latin", "cyrillic"],
+		provider: "local",
+		options: {
+			variants: [
+				{
+					src: ["./src/assets/fonts/jetbrains-mono-latin-400-normal.woff2"],
+					weight: "400",
+					style: "normal",
+				},
+				{
+					src: ["./src/assets/fonts/jetbrains-mono-latin-700-normal.woff2"],
+					weight: "700",
+					style: "normal",
+				},
+				{
+					src: ["./src/assets/fonts/jetbrains-mono-cyrillic-400-normal.woff2"],
+					weight: "400",
+					style: "normal",
+				},
+				{
+					src: ["./src/assets/fonts/jetbrains-mono-cyrillic-700-normal.woff2"],
+					weight: "700",
+					style: "normal",
+				},
+			],
+		},
 		fallbacks: [
 			"ui-monospace",
 			"SFMono-Regular",
