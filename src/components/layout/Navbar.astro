@@ -4,6 +4,7 @@ import * as path from "node:path";
 import type { ImageMetadata } from "astro";
 import { Icon } from "astro-icon/components";
 import navbarTitleImage from "@/assets/images/logo/navbar-title.png";
+import navbarTitleLightImage from "@/assets/images/logo/navbar-title-light.png";
 import DisplaySettings from "@/components/controls/DisplaySettingsIntegrated.svelte";
 import LightDarkSwitch from "@/components/controls/LightDarkSwitch.svelte";
 import Search from "@/components/controls/Search.svelte";
@@ -167,7 +168,8 @@ const logoVariants = await Promise.all(
                                     ) : (
                                         <Icon is:inline name="material-symbols:home-pin-outline" class="navbar-logo text-[1.75rem] mb-1 mr-2" />
                                     )}
-                    <img src={navbarTitleImage.src} alt={navbarTitle} class="navbar-title-image h-6 sm:h-8 md:h-10 w-auto object-contain" style="filter: drop-shadow(0 1px 4px rgba(255,255,255,0.5));" loading="eager" fetchpriority="high" />
+                    <img src={navbarTitleLightImage.src} alt={navbarTitle} class="navbar-title-image h-6 sm:h-8 md:h-10 w-auto object-contain dark:hidden" loading="eager" fetchpriority="high" />
+                    <img src={navbarTitleImage.src} alt={navbarTitle} class="navbar-title-image h-6 sm:h-8 md:h-10 w-auto object-contain hidden dark:block" style="filter: drop-shadow(0 1px 4px rgba(255,255,255,0.5));" loading="eager" fetchpriority="high" />
                     <span class="hidden">{navbarTitle}</span>
                 </div>
             </a>
