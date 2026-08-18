@@ -167,8 +167,8 @@ const logoVariants = await Promise.all(
                                     ) : (
                                         <Icon is:inline name="material-symbols:home-pin-outline" class="navbar-logo text-[1.75rem] mb-1 mr-2" />
                                     )}
-                    <img src={navbarTitleImage.src} alt={navbarTitle} class="navbar-title-image hidden sm:block h-8 md:h-10 w-auto object-contain" style="filter: drop-shadow(0 1px 4px rgba(255,255,255,0.5));" loading="eager" fetchpriority="high" />
-                    <span class="sm:hidden">{navbarTitle}</span>
+                    <img src={navbarTitleImage.src} alt={navbarTitle} class="navbar-title-image h-6 sm:h-8 md:h-10 w-auto object-contain" style="filter: drop-shadow(0 1px 4px rgba(255,255,255,0.5));" loading="eager" fetchpriority="high" />
+                    <span class="hidden">{navbarTitle}</span>
                 </div>
             </a>
             <div class:list={[

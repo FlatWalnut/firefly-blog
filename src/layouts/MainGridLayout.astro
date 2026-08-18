@@ -458,11 +458,14 @@ const hasMultipleImages =
             function getVisibleSlides() {
                 var all = container.querySelectorAll('.slide-item');
                 var isLg = window.innerWidth >= 1024;
+                var isPhoneLandscape = !isLg && window.innerWidth > window.innerHeight;
                 var visible = [];
                 for (var i = 0; i < all.length; i++) {
                     var el = all[i];
-                    if (isLg && el.classList.contains('lg:hidden')) continue;
-                    if (!isLg && el.classList.contains('hidden') && !el.classList.contains('lg:hidden')) continue;
+                    var isMobileSlide = el.classList.contains('lg:hidden');
+                    if (isLg && isMobileSlide) continue;
+                    if (isPhoneLandscape && isMobileSlide) continue;
+                    if (!isLg && !isPhoneLandscape && el.classList.contains('hidden') && !isMobileSlide) continue;
                     visible.push(el);
                 }
                 if (visible.length === 0) {

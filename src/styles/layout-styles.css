@@ -525,6 +525,14 @@ html[data-wallpaper-mode="fullscreen"] .absolute.w-full.z-30.no-banner-layout {
         font-size: 0.9rem;
         margin-top: 0.5rem;
     }
+
+    /* 手机横屏时显示桌面壁纸，隐藏移动壁纸 */
+    #banner-images-container .slide-item.block.lg\:hidden {
+        display: none !important;
+    }
+    #banner-images-container .slide-item.hidden.lg\:block {
+        display: block !important;
+    }
 }
 
 /* 移动端暗色模式文字阴影优化（仅横幅/全屏壁纸模式） */
