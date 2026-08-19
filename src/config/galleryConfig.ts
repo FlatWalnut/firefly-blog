@@ -19,7 +19,7 @@ export const galleryConfig: GalleryConfig = {
 			id: "daily-2026",
 			name: "日常随拍",
 			description: "随手记录的生活片段。",
-			date: "2024-01-01",
+			date: "2026-08-19",
 			tags: ["日常", "随拍"],
 		},
 		{
