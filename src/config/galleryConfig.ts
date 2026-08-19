@@ -41,6 +41,27 @@ export const galleryConfig: GalleryConfig = {
 			password: "123456",
 			passwordHint: "示例密码123456",
 		},
+		{
+			id: "post-anime-scene",
+			name: "萝卜子",
+			description: "一些精美的动漫场景截图",
+			date: "2026-08-13",
+			tags: ["动漫", "场景", "截图"],
+		},
+		{
+			id: "post-anime-screenshots",
+			name: "尤菲",
+			description: "一些喜欢的动漫截图",
+			date: "2026-08-13",
+			tags: ["动漫", "截图"],
+		},
+		{
+			id: "post-cute",
+			name: "可爱",
+			description: "一些可爱的瞬间",
+			date: "2026-08-13",
+			tags: ["可爱", "动漫", "图片"],
+		},
 	],
 
 	// 瀑布流最小列宽(px)，浏览器根据容器宽度自动计算列数，默认 240
