@@ -35,7 +35,6 @@ Present the following form to the user:
 8. **加密** - 是否需要密码保护？（yes/no，默认no）
 9. **评论** - 是否启用评论？（yes/no，默认yes）
 10. **草稿** - 保存为草稿还是直接发布？（draft/publish，默认publish）
-11. **同步相册** - 是否将文章图片同步到相册？（yes/no，默认no，需提供图床URL）
 ```
 
 ### Step 2: Wait for User Response
@@ -53,7 +52,6 @@ Present the following form to the user:
 | 加密 | false |
 | 评论 | true |
 | 草稿 | false (直接发布) |
-| 同步相册 | false (不同步) |
 
 ### Step 4: Confirm Before Creating
 
@@ -193,41 +191,6 @@ git add src/content/posts/<post-slug>/
 git commit -m "feat: 发布《文章标题》文章"
 git push origin main
 ```
-
-### Step 7: Sync Images to Gallery (避免重复存储)
-
-文章图片本地存一份用于构建，相册通过远程URL引用同一组图片，不在 `public/gallery/` 重复保存。
-
-**前提：** 文章必须包含图片才会执行此步骤。
-
-1. **上传图片到图床**，获取每张图片的远程URL
-2. **创建相册目录和 urls.txt：**
-```bash
-mkdir -p public/gallery/post-<post-slug>
-```
-然后创建 `public/gallery/post-<post-slug>/urls.txt`，内容为每行一个图片URL：
-```
-https://example.com/image1.jpg
-https://example.com/image2.jpg
-```
-3. **在 `src/config/galleryConfig.ts` 的 albums 数组中添加相册条目：**
-```typescript
-{
-    id: "post-<post-slug>",
-    name: "文章标题",
-    description: "文章描述",
-    date: "YYYY-MM-DD",
-    tags: ["标签1", "标签2"],
-},
-```
-4. **提交更改：**
-```bash
-git add public/gallery/post-<post-slug>/ src/config/galleryConfig.ts
-git commit -m "chore: 同步《文章标题》图片到相册"
-git push origin main
-```
-
-**注意：** urls.txt 中的图片URL需要用户自行上传到图床后提供，Claude 不会自动上传。
 
 ## Quick Commands Reference
 
